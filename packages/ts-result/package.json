@@ -1,0 +1,18 @@
+{
+  "name": "@lonli-lokli/ts-result",
+  "version": "1.0.0",
+  "private": false,
+  "description": "The Result monad represents some result in different staters - Initial, Pending, Success and Failure.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Lonli-Lokli/ts-result.git",
+    "directory": "packages/ts-result"
+  },
+  "keywords": [
+    "Typescript",
+    "Result",
+    "Monad"
+  ],
+  "author": "Lonli-Lokli",
+  "license": "MIT"
+}
