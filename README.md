@@ -1,6 +1,20 @@
 [Result Monad](https://en.wikibooks.org/wiki/Haskell/Understanding_monads) - monad represents some result in different states - Initial, Pending, Success and Failure. 
 
-### Inspired [RemoteData type](https://github.com/devexperts/remote-data-ts), but depends not on fp-ts but on smaller @sweet-monads
+### Inspired by [RemoteData type](https://github.com/devexperts/remote-data-ts), but depends not on [fp-ts](https://github.com/gcanti/fp-ts) but on smaller [@sweet-monads](https://github.com/JSMonk/sweet-monads)
+
+## Explanation
+The problem it solving present is a very common one. You are loading a list of things but instead of showing a loading indicator you just see zero items. Same happens with actual data loading - sometimes you just do not think it will fail.
+
+In my mental model, REST requests have one of four states:
+
+* We haven't asked yet.
+* We've asked, but we haven't got a response yet.
+* We got a response, but it was an error.
+* We got a response, and it was the data we wanted.
+
+That is the purpose of this library - allow clean usage over this states.
+
+Better explanation your can read in the artice [How Elm Slays a UI Antipattern](http://blog.jenkster.com/2016/06/how-elm-slays-a-ui-antipattern.html)
 
 ## Usage
 
