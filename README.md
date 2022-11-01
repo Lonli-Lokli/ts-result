@@ -1,6 +1,4 @@
-# @lonli-lokli/result
-
-[Result Monad](https://en.wikibooks.org/wiki/Haskell/Understanding_monads), The Result monad represents some result in different staters - Initial, Pending, Success and Failure. 
+[Result Monad](https://en.wikibooks.org/wiki/Haskell/Understanding_monads) - monad represents some result in different states - Initial, Pending, Success and Failure. 
 
 ### Inspired [RemoteData type](https://github.com/devexperts/remote-data-ts), but depends not on fp-ts but on smaller @sweet-monads
 
