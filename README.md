@@ -16,10 +16,10 @@ That is the purpose of this library - allow clean usage over this states.
 
 Better explanation your can read in the artice [How Elm Slays a UI Antipattern](http://blog.jenkster.com/2016/06/how-elm-slays-a-ui-antipattern.html)
 
-## Usage
-
+## Installation
 > npm install @lonli-lokli/result
 
+## Usage
 ```typescript
 import { Result, success } from "@lonli-lokli/result";
 
