@@ -4,11 +4,17 @@
   "license": "MIT",
   "scripts": {
     "nx": "node -v && nx",
-    "build": "nx build ts-result",
+    "build:nx": "nx build ts-result",
+    "build": "run-p build:esm build:cjs build:declaration",
+    "build:copy": "shx cp ./packages/ts-result/package.json ./build/package.json && shx cp ./README.md ./build/README.md",
+    "build:esm": "tsc --project ./packages/ts-result/tsconfig.lib.json --declaration false --rootDir packages/ts-result/src --module esnext --outDir ./build/esm",
+    "build:cjs": "tsc --project ./packages/ts-result/tsconfig.lib.json --declaration false --rootDir packages/ts-result/src --module commonjs --outDir ./build/cjs",
+    "build:declaration": "tsc --project ./packages/ts-result/tsconfig.lib.json --rootDir packages/ts-result/src --outDir ./build --emitDeclarationOnly",
+    "postbuild": "npm run build:copy",
     "test": "nx run-many --all --target=test",
     "format": "nx format:write",
     "lint": "nx run-many --all --target=lint"
-  },
+    },
   "private": false,
   "dependencies": {
     "@sweet-monads/either": "3.1.0",
@@ -34,6 +40,7 @@
     "jest-environment-jsdom": "28.1.1",
     "nx": "15.0.4",
     "prettier": "2.7.1",
+    "shx": "^0.3.4",
     "ts-jest": "28.0.5",
     "ts-node": "10.9.1",
     "typescript": "4.8.2"

@@ -1,7 +1,16 @@
 {
   "name": "@lonli-lokli/ts-result",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": false,
+  "sideEffects": false,
+  "main": "./cjs/index.js",
+  "module": "./esm/index.js",
+  "typings": "index.d.ts",
+  "exports": {
+    "import": "./esm/index.js",
+    "require": "./cjs/index.js",
+    "default": "./cjs/index.js"
+  },
   "description": "The Result monad represents some result in different staters - Initial, Pending, Success and Failure.",
   "repository": {
     "type": "git",
