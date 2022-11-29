@@ -417,6 +417,7 @@ test('mergeInMany', () =>
     expect(success(2).unwrap()).toBe(2);
     expect(() => failure(new TypeError()).unwrap()).toThrow('Result state is not Right');
     expect(() => failure(2).unwrap()).toThrow('Result state is not Right');
+    expect(() => pending<Error, number>().unwrap({ pending: () => new Error('Custom')})).toThrow('Custom');
   });
 
 function result(): fc.Arbitrary<Result<string, number>> {

@@ -1,5 +1,9 @@
 import { Either, left, right } from '@sweet-monads/either';
-import type { Alternative, AsyncMonad, Container } from '@sweet-monads/interfaces';
+import type {
+  Alternative,
+  AsyncMonad,
+  Container,
+} from '@sweet-monads/interfaces';
 import { just, Maybe, none } from '@sweet-monads/maybe';
 
 const enum ResultType {
@@ -359,16 +363,16 @@ class ResultConstructor<F, S, T extends ResultType = ResultType>
     return success(v);
   }
 
-  static fromMaybeE<E, D>(v: Maybe<Either<E, D>>): Result<E, D> {
-    return v.isJust() ? fromEither(v.value) : initial();
-  }
-
   static fromMaybe<T>(v: Maybe<T>) {
     return v.isJust() ? success(v.value) : initial();
   }
 
   static fromEither<L, R>(v: Either<L, R>) {
     return v.isRight() ? success<L, R>(v.value) : failure<L, R>(v.value);
+  }
+
+  static fromTry<T>(v: Maybe<T>) {
+    return v.isJust() ? success(v.value) : initial();
   }
 
   static success<F = never, T = never>(v: T): Result<F, T> {
@@ -423,10 +427,33 @@ class ResultConstructor<F, S, T extends ResultType = ResultType>
     return this.type === ResultType.Pending;
   }
 
-  unwrap(): S {
-    if (this.isSuccess()) return this.value;
+  fold<F, S, D>(onInitial: () => D, onPending: () => D, onFailure: (failure: F) => D, onSuccess: (success: S) => D): D {
+    if (this.isInitial()) {
+      return onInitial();
+    }
+    if (this.isPending()) {
+      return onPending();
+    }
+    if (this.isFailure()) {
+      return onFailure(this.value as F);
+    }
+    return onSuccess(this.value as S);
+  }
 
-    throw new Error("Result state is not Right");
+  unwrap(factory?: {
+    initial?: () => unknown;
+    pending?: () => unknown;
+    failure?: (left: F) => unknown;
+  }): S {
+    if (this.isSuccess()) return this.value;
+    if (this.isInitial() && typeof factory?.initial === 'function')
+      throw factory.initial();
+    if (this.isPending() && typeof factory?.pending === 'function')
+      throw factory.pending();
+    if (this.isFailure() && typeof factory?.failure === 'function')
+      throw factory.failure(this.value);
+
+    throw new Error('Result state is not Right');
   }
 
   join<F1, F2, S>(this: Result<F1, Result<F2, S>>): Result<F1 | F2, S> {
@@ -622,7 +649,6 @@ export const {
   from,
   fromMaybe,
   fromEither,
-  fromMaybeE,
   chain,
   initial,
   pending,

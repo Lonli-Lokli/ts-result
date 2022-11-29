@@ -6,14 +6,18 @@
     "nx": "node -v && nx",
     "build:nx": "nx build ts-result",
     "build": "run-p build:esm build:cjs build:declaration",
+    "build:clean": "shx rm -rf build",
     "build:copy": "shx cp ./packages/ts-result/package.json ./build/package.json && shx cp ./README.md ./build/README.md",
     "build:esm": "tsc --project ./packages/ts-result/tsconfig.lib.json --declaration false --rootDir packages/ts-result/src --module esnext --outDir ./build/esm",
     "build:cjs": "tsc --project ./packages/ts-result/tsconfig.lib.json --declaration false --rootDir packages/ts-result/src --module commonjs --outDir ./build/cjs",
     "build:declaration": "tsc --project ./packages/ts-result/tsconfig.lib.json --rootDir packages/ts-result/src --outDir ./build --emitDeclarationOnly",
+    "prebuild": "npm run build:clean",
     "postbuild": "npm run build:copy",
     "test": "nx run-many --all --target=test",
     "format": "nx format:write",
-    "lint": "nx run-many --all --target=lint"
+    "deploy": "cd build && npm publish --access public",
+    "lint": "nx run-many --all --target=lint",
+    "publish": "run-s lint test build deploy"
     },
   "private": false,
   "dependencies": {
@@ -44,5 +48,10 @@
     "ts-jest": "28.0.5",
     "ts-node": "10.9.1",
     "typescript": "4.8.2"
+  },
+  "engines": {
+    "node": ">16.13.0 <17.0.0",
+    "npm": ">=8.15.0 <9",
+    "yarn": "Please use NPM instead of yarn to install dependencies"
   }
 }

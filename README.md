@@ -17,11 +17,11 @@ That is the purpose of this library - allow clean usage over this states.
 Better explanation your can read in the artice [How Elm Slays a UI Antipattern](http://blog.jenkster.com/2016/06/how-elm-slays-a-ui-antipattern.html)
 
 ## Installation
-> npm install @lonli-lokli/result
+> npm install @lonli-lokli/ts-result
 
 ## Usage
 ```typescript
-import { Result, success } from "@lonli-lokli/result";
+import { Result, success } from "@lonli-lokli/ts-result";
 
 class UserNotFoundError extends Error {
   name: "UserNotFoundError";
@@ -67,6 +67,8 @@ const user = getUser(1).map(({ email }) => email);
 - [`Result#toMaybe`](#resulttomaybe)
 - [`Result#toNullable`](#resulttonullable)
 - [`Result#toUndefined`](#resulttoundefined)
+- [`Result#toUndefined`](#resultunwrap)
+- [`Result#toUndefined`](#resultfold)
 - [`Helpers`](#helpers)
 
 #### `chain`
@@ -669,18 +671,44 @@ Example:
 success<string, number>(10).toUndefined(); // number | undefined
 ```
 
-
+#### `Result#unwrap`
 
 ```typescript
-function unwrap<S>(): S | undefined;
+function unwrap<S>(): S;
 ```
 
-- Returns S if `Result` is in `Success` state and undefined otherwise
+- Returns S if `Result` is in `Success` state and throws otherwise via provided factory or pure Error
 
 Example:
 
 ```typescript
-success<string, number>(10).toUndefined(); // number | undefined
+success<string, number>(10).unwrap(); // number
+initial<Error, number>().unwrap(); // throws default (Error)
+pending<Error, number>().unwrap({ failure: () => new Error('Custom')}); // throws  custom (Error)
+```
+
+#### `Result#fold`
+
+```typescript
+function fold<F, S, D>(onInitial: () => D, onPending: () => D, onFailure: (failure: F) => D, onSuccess: (success: S) => D): S;
+```
+
+- Returns `D` from `Result` based on the factory
+
+Example:
+
+```typescript
+const onInitial = () => "it's initial"
+const onPending = () => "it's pending"
+const onFailure = (err) => "it's failure"
+const onSuccess = (data) => `${data + 1}`
+const f = fold(onInitial, onPending, onFailure, onSuccess)
+
+f(initial()) // "it's initial"
+f(pending()) // "it's pending"
+f(failure(new Error('error text'))) // "it's failure"
+f(success(21)) // '22'
+
 ```
 
 #### Helpers
@@ -698,6 +726,9 @@ success(2).unwrap() // number
 failure(new TypeError()).unwrap() // throws
 failure(2).unwrap() // throws  (don't do this)
 ```
+
+## Development
+
 
 ## License
 
