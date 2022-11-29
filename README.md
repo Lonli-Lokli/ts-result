@@ -67,8 +67,8 @@ const user = getUser(1).map(({ email }) => email);
 - [`Result#toMaybe`](#resulttomaybe)
 - [`Result#toNullable`](#resulttonullable)
 - [`Result#toUndefined`](#resulttoundefined)
-- [`Result#toUndefined`](#resultunwrap)
-- [`Result#toUndefined`](#resultfold)
+- [`Result#unwrap`](#resultunwrap)
+- [`Result#fold`](#resultfold)
 - [`Helpers`](#helpers)
 
 #### `chain`
@@ -693,7 +693,7 @@ pending<Error, number>().unwrap({ failure: () => new Error('Custom')}); // throw
 function fold<F, S, D>(onInitial: () => D, onPending: () => D, onFailure: (failure: F) => D, onSuccess: (success: S) => D): S;
 ```
 
-- Returns `D` from `Result` based on the factory
+- Extracts value from `Result` and converts it to `D` based on the factory
 
 Example:
 

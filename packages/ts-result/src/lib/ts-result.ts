@@ -427,7 +427,12 @@ class ResultConstructor<F, S, T extends ResultType = ResultType>
     return this.type === ResultType.Pending;
   }
 
-  fold<F, S, D>(onInitial: () => D, onPending: () => D, onFailure: (failure: F) => D, onSuccess: (success: S) => D): D {
+  fold<F, S, D>(
+    onInitial: () => D,
+    onPending: () => D,
+    onFailure: (failure: F) => D,
+    onSuccess: (success: S) => D
+  ): D {
     if (this.isInitial()) {
       return onInitial();
     }
