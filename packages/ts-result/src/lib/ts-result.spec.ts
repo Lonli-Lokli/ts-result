@@ -9,14 +9,16 @@ import {
   fromMaybe,
   fromEither,
   mergeInMany,
+  fromTry,
+  fromPromise,
 } from './ts-result';
 import { just, none } from '@sweet-monads/maybe';
 import { left, right } from '@sweet-monads/either';
 
 describe('Result', () => {
   test.each([
-    [initial(), true, false, false, false],
-    [pending(), false, true, false, false],
+    [initial, true, false, false, false],
+    [pending, false, true, false, false],
     [success('s'), false, false, true, false],
     [failure('s'), false, false, false, true],
   ])(
@@ -38,8 +40,8 @@ describe('Result', () => {
         fc.subarray(['0', 'x', 'y']),
         (i, p, f, s) => {
           const merged = merge([
-            ...i.map(() => initial()),
-            ...p.map(() => pending()),
+            ...i.map(() => initial),
+            ...p.map(() => pending),
             ...f.map((e) => failure<string, string>(e)),
             ...s.map((s) => success<string, string>(s)),
           ]);
@@ -58,8 +60,8 @@ describe('Result', () => {
   test('merge types', () =>
     fc.assert(
       fc.property(fc.integer(), fc.string(), (int, str) => {
-        const v1 = initial<TypeError, number>();
-        const v2 = pending<TypeError, number>();
+        const v1 = initial;
+        const v2 = pending;
         const v3 = success<TypeError, number>(int);
         const v4 = success<ReferenceError, string>(str);
         const v5 = failure<Error, boolean>(new Error());
@@ -103,6 +105,46 @@ describe('Result', () => {
       })
     ));
 
+  test('fromTry', () =>
+    fc.assert(
+      fc.property(fc.integer(), fc.string(), (int, str) => {
+        const error = new Error('test');
+
+        const v1 = fromTry<number>(() => int);
+        const v2 = fromTry<string>(() => str);
+        const v3 = fromTry<string>(() => {
+          throw error;
+        });
+
+        expect(v1.isSuccess()).toBe(true);
+        expect(v2.isSuccess()).toBe(true);
+        expect(v3.isFailure()).toBe(true);
+
+        expect(v1.unwrap()).toBe(int);
+        expect(v2.unwrap()).toBe(str);
+        expect(v3.value).toBe(error);
+      })
+    ));
+
+  test('fromPromise', async () =>
+    await fc.assert(
+      fc.asyncProperty(fc.integer(), fc.string(), async (int, str) => {
+        const error = new Error('test');
+
+        const v1 = await fromPromise<Error, number>(Promise.resolve(int));
+        const v2 = await fromPromise<Error, string>(Promise.resolve(str));
+        const v3 = await fromPromise<Error, string>(Promise.reject(error));
+
+        expect(v1.isSuccess()).toBe(true);
+        expect(v2.isSuccess()).toBe(true);
+        expect(v3.isFailure()).toBe(true);
+
+        expect(v1.unwrap()).toBe(int);
+        expect(v2.unwrap()).toBe(str);
+        expect(v3.value).toBe(error);
+      })
+    ));
+
   test('fromEither', () =>
     fc.assert(
       fc.property(fc.integer(), fc.string(), (int, str) => {
@@ -121,8 +163,8 @@ describe('Result', () => {
   test('identity', () =>
     fc.assert(
       fc.property(fc.integer(), fc.string(), fc.boolean(), (int, str, bool) => {
-        const v1 = initial();
-        const v2 = pending();
+        const v1 = initial;
+        const v2 = pending;
         const v3 = success<TypeError, number>(int);
         const v4 = success<ReferenceError, string>(str);
         const v5 = success<ReferenceError, boolean>(bool);
@@ -287,7 +329,7 @@ test('asyncApply', () => {
 test('chain', () => {
   const v1 = success<Error, number>(2);
   const v2 = failure<Error, number>(new Error());
-  const v3 = initial<Error, number>();
+  const v3 = initial;
 
   // Result<Error | TypeError, string>.Success with value "2"
   const newVal1 = v1.chain((a) => success<TypeError, string>(a.toString()));
@@ -297,7 +339,7 @@ test('chain', () => {
   const newVal3 = v2.chain((a) => success<TypeError, string>(a.toString()));
   // Result<Error | TypeError, string>.Failure with value new Error()
   const newVal4 = v2.chain((a) => failure<TypeError, string>(new TypeError()));
-  // Result<Error | TypeError, string>.Initial with no value
+  // Result<TypeError, string>.Initial with no value
   const newVal5 = v3.chain((a) => failure<TypeError, string>(new TypeError()));
 
   expect(newVal1.isSuccess()).toBe(true);
@@ -310,14 +352,14 @@ test('chain', () => {
 test('asyncChain', async () => {
   const v1 = success<Error, number>(2);
   const v2 = failure<Error, number>(new Error());
-  const v3 = initial<Error, number>();
+  const v3 = initial;
 
   // Result<Error | TypeError, string>.Success with value "2"
   const newVal1 = v1.asyncChain((a) =>
     Promise.resolve(success<TypeError, string>(a.toString()))
   );
   // Result<Error | TypeError, string>.Failure with value new TypeError()
-  const newVal2 = v1.asyncChain((a) =>
+  const newVal2 = v1.asyncChain(() =>
     Promise.resolve(failure<TypeError, string>(new TypeError()))
   );
   // Result<Error | TypeError, string>.Failure with value new Error()
@@ -325,11 +367,11 @@ test('asyncChain', async () => {
     Promise.resolve(success<TypeError, string>(a.toString()))
   );
   // Result<Error | TypeError, string>.Failure with value new Error()
-  const newVal4 = v2.asyncChain((a) =>
+  const newVal4 = v2.asyncChain(() =>
     Promise.resolve(failure<TypeError, string>(new TypeError()))
   );
   // Result<Error | TypeError, string>.Initial with no value
-  const newVal5 = v3.asyncChain((a) =>
+  const newVal5 = v3.asyncChain(() =>
     Promise.resolve(failure<TypeError, string>(new TypeError()))
   );
 
@@ -413,12 +455,38 @@ test('mergeInMany', () =>
     })
   ));
 
-  test('unwrap', () => {
-    expect(success(2).unwrap()).toBe(2);
-    expect(() => failure(new TypeError()).unwrap()).toThrow('Result state is not Right');
-    expect(() => failure(2).unwrap()).toThrow('Result state is not Right');
-    expect(() => pending<Error, number>().unwrap({ pending: () => new Error('Custom')})).toThrow('Custom');
-  });
+test('unwrap', () => {
+  expect(success(2).unwrap()).toBe(2);
+  expect(() => failure(new TypeError()).unwrap()).toThrow(
+    'Result state is not Right'
+  );
+  expect(() => failure(2).unwrap()).toThrow('Result state is not Right');
+  expect(() =>
+    pending.unwrap({ pending: () => new Error('Custom') })
+  ).toThrow('Custom');
+});
+
+test('toString', () => {
+  expect(success(1).toString()).toBe('[object Result]');
+  expect(failure(1).toString()).toBe('[object Result]');
+});
+
+test("unwrapOr", () => {
+  const v1 = success<Error, number>(2);
+  const v2 = failure<Error, number>(new Error());
+
+  expect(v1.unwrapOr(3)).toBe(2);
+  expect(v2.unwrapOr(3)).toBe(3);
+});
+
+test("unwrapOrElse", () => {
+  const v1 = right<number, number>(2);
+  const v2 = left<number, number>(3);
+
+  expect(v1.unwrapOrElse(x => x * 2)).toBe(2);
+  expect(v2.unwrapOrElse(x => x * 2)).toBe(6);
+});
+
 
 function result(): fc.Arbitrary<Result<string, number>> {
   return fc
@@ -430,9 +498,9 @@ function result(): fc.Arbitrary<Result<string, number>> {
     .map(([str, num]) => {
       switch (num) {
         case 0:
-          return initial<string, number>();
+          return initial;
         case 1:
-          return pending<string, number>();
+          return pending;
         case 2:
           return success<string, number>(num);
         case 3:

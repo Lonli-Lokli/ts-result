@@ -46,6 +46,9 @@ const user = getUser(1).map(({ email }) => email);
 - [`failure`](#failure)
 - [`success`](#success)
 - [`from`](#from)
+- [`fromPromise`](#fromPromise)
+- [`fromTry`](#fromTry)
+- [`from`](#from)
 - [`fromMaybe`](#frommaybe)
 - [`fromEither`](#fromeither)
 - [`isResult`](#isresult)
@@ -109,16 +112,16 @@ function merge<F1, S1, F2, S2, F3, S3>(
 Example:
 
 ```typescript
-const v1 = initial<TypeError, number>(); // Result<TypeError, number>.Initial
-const v2 = pending<TypeError, number>(); // Result<TypeError, number>.Pending
+const v1 = initial; // Result<never, never>.Initial
+const v2 = pending; // Result<never, never>.Pending
 const v3 = success<TypeError, number>(2); // Result<TypeError, number>.Success
 const v4 = success<ReferenceError, string>("test"); // Result<ReferenceError, string>.Success
 const v5 = failure<Error, boolean>(new Error()); // Result<Error, boolean>.Failure
 
-const r1 = merge([v1, v2]); // Result<TypeError, [number, number]>.Initial
-const r2 = merge([v2, v5]); // Result<TypeError | Error, [number, boolean]>.Pending
+const r1 = merge([v1, v2]); // Result<never, [number, number]>.Initial
+const r2 = merge([v2, v5]); // Result<Error, [never, boolean]>.Pending
 const r3 = merge([v3, v4]); // Result<TypeError | ReferenceError, [number, string]>.Success
-const r4 = merge([v3, v4, v5]); // Result<TypeError | ReferenceError | Error, [number, string, boolean]>.Failure
+const r4 = merge([v3, v4, v5]); // Result<TypeError | Error | ReferenceError, [number, string, boolean]>.Failure
 ```
 
 #### `mergeInOne`
@@ -138,8 +141,8 @@ function merge<F1, S1, F2, S2, F3, S3>(
 Example:
 
 ```typescript
-const v1 = initial<TypeError, number>(); // Result<TypeError, number>.Initial
-const v2 = pending<TypeError, number>(); // Result<TypeError, number>.Pending
+const v1 = initial; // Result<TypeError, number>.Initial
+const v2 = pending; // Result<TypeError, number>.Pending
 const v3 = success<TypeError, number>(2); // Result<TypeError, number>.Success
 const v4 = success<ReferenceError, string>("test"); // Result<ReferenceError, string>.Success
 const v5 = failure<Error, boolean>(new Error()); // Result<Error, boolean>.Failure
@@ -178,7 +181,7 @@ merge([v1, v2, v3]); // Result<Array<TypeError | ReferenceError | Error>, [numbe
 #### `initial`
 
 ```typescript
-function initial<F, S>(): Result<F, S>;
+const initial: Result<never, never>;
 ```
 
 - Returns `Result` with `Initial` state which does not contain value.
@@ -186,14 +189,13 @@ function initial<F, S>(): Result<F, S>;
 Example:
 
 ```typescript
-const v1 = initial(); // Result<undefined, never>.Initial
-const v2 = initial<Error, number>(); // Result<Error, number>.Initial
+const v1 = initial; // Result<undefined, never>.Initial
 ```
 
 #### `pending`
 
 ```typescript
-function pending<F, S>(): Result<F, S>;
+const pending: Result<F, S>;
 ```
 
 - Returns `Result` with `Pending` state which does not contain value.
@@ -201,8 +203,7 @@ function pending<F, S>(): Result<F, S>;
 Example:
 
 ```typescript
-const v1 = pending(); // Result<undefined, never>.Initial
-const v2 = pending<Error, number>(); // Result<Error, number>.Initial
+const v1 = pending; // Result<never, never>.Initial
 ```
 
 #### `failure`
@@ -249,6 +250,35 @@ Example:
 
 ```typescript
 from(2); // Result<never, number>.Success
+```
+
+#### `fromTry`
+
+Returns `Success` with function result or `Failure` if function execution throws an error.
+
+```typescript
+function fromTry<L, R>(fn: () => R): Result<L, R>;
+```
+
+```typescript
+fromTry(() => 2); // Result<unknown, number>.Success
+fromTry(() => {
+  throw new Error("test");
+}); // Result<unknown, never>.Failure
+```
+
+
+#### `fromPromise`
+
+Returns promise of `Success` if the provided promise fulfilled or `Failure` with the error value if the provided promise rejected.
+
+```typescript
+function fromPromise<R>(promise: Promise<R>): Promise<Result<unknown, R>>;
+```
+
+```typescript
+fromPromise(Promise.resolve(2)); // Promise<Result<unknown, number>.Right>
+fromPromise(Promise.reject(new Error("test"))); // Promise<Result<unknown, never>.Left>
 ```
 
 #### `fromMaybe`
@@ -571,7 +601,7 @@ Example:
 ```typescript
 const v1 = success<Error, number>(2);
 const v2 = failure<Error, number>(new Error());
-const v3 = initial<Error, number>();
+const v3 = initial;
 
 // Result<Error | TypeError, string>.Success with value "2"
 const newVal1 = v1.chain(a => success<TypeError, string>(a.toString()));
@@ -581,7 +611,7 @@ const newVal2 = v1.chain(a => failure<TypeError, string>(new TypeError()));
 const newVal3 = v2.chain(a => success<TypeError, string>(a.toString()));
 // Result<Error | TypeError, string>.Failure with value new Error()
 const newVal4 = v2.chain(a => failure<TypeError, string>(new TypeError()));
-// Result<Error | TypeError, string>.Initial with no value
+// Result<TypeError, string>.Initial with no value
 const newVal5 = v3.chain(a => failure<TypeError, string>(new TypeError()));
 ```
 
@@ -598,7 +628,7 @@ Example:
 ```typescript
 const v1 = success<Error, number>(2);
 const v2 = failure<Error, number>(new Error());
-const v3 = initial<Error, number>();
+const v3 = initial;
 
 // Promise<Result<Error | TypeError, string>.Success> with value "2"
 const newVal1 = v1.asyncChain(a => Promise.resolve(right<TypeError, string>(a.toString())));
@@ -683,8 +713,8 @@ Example:
 
 ```typescript
 success<string, number>(10).unwrap(); // number
-initial<Error, number>().unwrap(); // throws default (Error)
-pending<Error, number>().unwrap({ failure: () => new Error('Custom')}); // throws  custom (Error)
+initial.unwrap(); // throws default (Error)
+pending.unwrap({ failure: () => new Error('Custom')}); // throws  custom (Error)
 ```
 
 #### `Result#fold`
@@ -725,6 +755,13 @@ const { value } = failure(new Error()); // Error | undefined
 success(2).unwrap() // number
 failure(new TypeError()).unwrap() // throws
 failure(2).unwrap() // throws  (don't do this)
+
+failure(2).unwrapOr(3) // returns 3
+success(2).unwrapOr(3) // returns 2
+
+failure(2).unwrapOrElse(num => num * 2) // returns 4
+success(2).unwrapOrElse(num => num * 2) // returns 2
+
 ```
 
 ## Development

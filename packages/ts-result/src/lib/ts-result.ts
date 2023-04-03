@@ -363,16 +363,26 @@ class ResultConstructor<F, S, T extends ResultType = ResultType>
     return success(v);
   }
 
+  static fromTry<R>(fn: () => R): Result<unknown, R> {
+    try {
+      return ResultConstructor.success(fn());
+    } catch (e) {
+      return ResultConstructor.failure(e);
+    }
+  }
+
+  static fromPromise<L, R>(promise: Promise<R>): Promise<Result<L, R>> {
+    return promise
+      .then(ResultConstructor.success)
+      .catch(ResultConstructor.failure);
+  }
+
   static fromMaybe<T>(v: Maybe<T>) {
-    return v.isJust() ? success(v.value) : initial();
+    return v.isJust() ? success(v.value) : initial;
   }
 
   static fromEither<L, R>(v: Either<L, R>) {
     return v.isRight() ? success<L, R>(v.value) : failure<L, R>(v.value);
-  }
-
-  static fromTry<T>(v: Maybe<T>) {
-    return v.isJust() ? success(v.value) : initial();
   }
 
   static success<F = never, T = never>(v: T): Result<F, T> {
@@ -389,18 +399,21 @@ class ResultConstructor<F, S, T extends ResultType = ResultType>
     );
   }
 
-  static initial<F = never, T = never>(): Result<F, T> {
-    return new ResultConstructor<F, T, ResultType.Initial>(
-      ResultType.Initial,
-      undefined
-    );
+  private static _initialInstance: ResultConstructor<never, never, ResultType.Initial>;
+  static initial(): Result<never, never> {
+    if (ResultConstructor._initialInstance === undefined) {
+      ResultConstructor._initialInstance = new ResultConstructor<never, never, ResultType.Initial>(ResultType.Initial, undefined);
+    }
+    return ResultConstructor._initialInstance;
   }
 
-  static pending<F = never, T = never>(): Result<F, T> {
-    return new ResultConstructor<F, T, ResultType.Pending>(
-      ResultType.Pending,
-      undefined
-    );
+
+  private static _pendingInstance: ResultConstructor<never, never, ResultType.Pending>;
+  static pending(): Result<never, never> {
+    if (ResultConstructor._pendingInstance === undefined) {
+      ResultConstructor._pendingInstance = new ResultConstructor<never, never, ResultType.Pending>(ResultType.Pending, undefined);
+    }
+    return ResultConstructor._pendingInstance;
   }
 
   private constructor(
@@ -443,22 +456,6 @@ class ResultConstructor<F, S, T extends ResultType = ResultType>
       return onFailure(this.value as F);
     }
     return onSuccess(this.value as S);
-  }
-
-  unwrap(factory?: {
-    initial?: () => unknown;
-    pending?: () => unknown;
-    failure?: (left: F) => unknown;
-  }): S {
-    if (this.isSuccess()) return this.value;
-    if (this.isInitial() && typeof factory?.initial === 'function')
-      throw factory.initial();
-    if (this.isPending() && typeof factory?.pending === 'function')
-      throw factory.pending();
-    if (this.isFailure() && typeof factory?.failure === 'function')
-      throw factory.failure(this.value);
-
-    throw new Error('Result state is not Right');
   }
 
   join<F1, F2, S>(this: Result<F1, Result<F2, S>>): Result<F1 | F2, S> {
@@ -564,15 +561,15 @@ class ResultConstructor<F, S, T extends ResultType = ResultType>
 
   chain<A, B>(f: (r: S) => Result<A, B>): Result<A | F, B> {
     if (this.isInitial()) {
-      return ResultConstructor.initial<A, B>();
+      return ResultConstructor.initial();
     }
     const next = f(this.value as S);
     if (isResult(next) && next.isInitial()) {
-      return ResultConstructor.initial<A, B>();
+      return ResultConstructor.initial();
     }
 
     if (this.isPending() || (isResult(next) && next.isPending())) {
-      return ResultConstructor.pending<A, B>();
+      return ResultConstructor.pending();
     }
     if (this.isFailure()) {
       return ResultConstructor.failure<F, B>(this.value as F);
@@ -587,15 +584,15 @@ class ResultConstructor<F, S, T extends ResultType = ResultType>
     f: (r: S) => Promise<Result<A, B>>
   ): Promise<Result<A | F, B>> {
     if (this.isInitial()) {
-      return Promise.resolve(ResultConstructor.initial<A, B>());
+      return Promise.resolve(ResultConstructor.initial());
     }
     return f(this.value as S).then((p) => {
       if (p.isInitial()) {
-        return ResultConstructor.initial<A, B>();
+        return ResultConstructor.initial();
       }
 
       if (this.isPending() || p.isPending()) {
-        return ResultConstructor.pending<A, B>();
+        return ResultConstructor.pending();
       }
 
       if (this.isFailure() || p.isFailure()) {
@@ -637,6 +634,34 @@ class ResultConstructor<F, S, T extends ResultType = ResultType>
   toUndefined(): S | undefined {
     return this.isSuccess() ? this.value : undefined;
   }
+
+  unwrap(factory?: {
+    initial?: () => unknown;
+    pending?: () => unknown;
+    failure?: (left: F) => unknown;
+  }): S {
+    if (this.isSuccess()) return this.value;
+    if (this.isInitial() && typeof factory?.initial === 'function')
+      throw factory.initial();
+    if (this.isPending() && typeof factory?.pending === 'function')
+      throw factory.pending();
+    if (this.isFailure() && typeof factory?.failure === 'function')
+      throw factory.failure(this.value);
+
+    throw new Error('Result state is not Right');
+  }
+  
+  unwrapOr(x: S): S {
+    return this.isSuccess() ? this.value : x;
+  }
+
+  unwrapOrElse(f: (l: F) => S): S {
+    return this.isSuccess() ? this.value : f(this.value as F);
+  }
+
+  get [Symbol.toStringTag]() {
+    return 'Result';
+  }
 }
 
 export type Result<F, S> =
@@ -652,12 +677,15 @@ export const {
   failure,
   success,
   from,
+  fromTry,
+  fromPromise,
   fromMaybe,
   fromEither,
   chain,
-  initial,
-  pending,
 } = ResultConstructor;
+
+export const initial = ResultConstructor.initial();
+export const pending = ResultConstructor.pending();
 
 export const isResult = <F, S>(
   value: unknown | Result<F, S>
