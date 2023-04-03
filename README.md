@@ -48,7 +48,6 @@ const user = getUser(1).map(({ email }) => email);
 - [`from`](#from)
 - [`fromPromise`](#fromPromise)
 - [`fromTry`](#fromTry)
-- [`from`](#from)
 - [`fromMaybe`](#frommaybe)
 - [`fromEither`](#fromeither)
 - [`isResult`](#isresult)

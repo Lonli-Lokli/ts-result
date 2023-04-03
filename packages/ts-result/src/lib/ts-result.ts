@@ -399,19 +399,34 @@ class ResultConstructor<F, S, T extends ResultType = ResultType>
     );
   }
 
-  private static _initialInstance: ResultConstructor<never, never, ResultType.Initial>;
+  private static _initialInstance: ResultConstructor<
+    never,
+    never,
+    ResultType.Initial
+  >;
   static initial(): Result<never, never> {
     if (ResultConstructor._initialInstance === undefined) {
-      ResultConstructor._initialInstance = new ResultConstructor<never, never, ResultType.Initial>(ResultType.Initial, undefined);
+      ResultConstructor._initialInstance = new ResultConstructor<
+        never,
+        never,
+        ResultType.Initial
+      >(ResultType.Initial, undefined);
     }
     return ResultConstructor._initialInstance;
   }
 
-
-  private static _pendingInstance: ResultConstructor<never, never, ResultType.Pending>;
+  private static _pendingInstance: ResultConstructor<
+    never,
+    never,
+    ResultType.Pending
+  >;
   static pending(): Result<never, never> {
     if (ResultConstructor._pendingInstance === undefined) {
-      ResultConstructor._pendingInstance = new ResultConstructor<never, never, ResultType.Pending>(ResultType.Pending, undefined);
+      ResultConstructor._pendingInstance = new ResultConstructor<
+        never,
+        never,
+        ResultType.Pending
+      >(ResultType.Pending, undefined);
     }
     return ResultConstructor._pendingInstance;
   }
@@ -650,7 +665,7 @@ class ResultConstructor<F, S, T extends ResultType = ResultType>
 
     throw new Error('Result state is not Right');
   }
-  
+
   unwrapOr(x: S): S {
     return this.isSuccess() ? this.value : x;
   }
@@ -690,3 +705,23 @@ export const pending = ResultConstructor.pending();
 export const isResult = <F, S>(
   value: unknown | Result<F, S>
 ): value is Result<F, S> => value instanceof ResultConstructor;
+
+export const isInitial = <F, S>(
+  value: unknown | Result<F, S>
+): value is ResultConstructor<F, S, ResultType.Initial> =>
+  isResult(value) && value.isInitial();
+
+export const isPending = <F, S>(
+  value: unknown | Result<F, S>
+): value is ResultConstructor<F, S, ResultType.Pending> =>
+  isResult(value) && value.isPending();
+
+export const isSuccess = <F, S>(
+  value: unknown | Result<F, S>
+): value is ResultConstructor<F, S, ResultType.Success> =>
+  isResult(value) && value.isSuccess();
+
+export const isFailure = <F, S>(
+  value: unknown | Result<F, S>
+): value is ResultConstructor<F, S, ResultType.Failure> =>
+  isResult(value) && value.isFailure();
