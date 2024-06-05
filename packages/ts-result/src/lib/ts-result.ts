@@ -2,7 +2,7 @@ import { Either, left, right } from '@sweet-monads/either';
 import type {
   Alternative,
   AsyncMonad,
-  Container,
+  Container
 } from '@sweet-monads/interfaces';
 import { just, Maybe, none } from '@sweet-monads/maybe';
 
@@ -455,7 +455,7 @@ class ResultConstructor<F, S, T extends ResultType = ResultType>
     return this.type === ResultType.Pending;
   }
 
-  fold<F, S, D>(
+  fold<D>(
     onInitial: () => D,
     onPending: () => D,
     onFailure: (failure: F) => D,

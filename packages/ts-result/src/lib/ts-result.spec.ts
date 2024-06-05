@@ -480,13 +480,32 @@ test("unwrapOr", () => {
 });
 
 test("unwrapOrElse", () => {
-  const v1 = right<number, number>(2);
-  const v2 = left<number, number>(3);
+  const v1 = success<number, number>(2);
+  const v2 = failure<number, number>(3);
 
   expect(v1.unwrapOrElse(x => x * 2)).toBe(2);
   expect(v2.unwrapOrElse(x => x * 2)).toBe(6);
 });
 
+
+test("fold", () => {
+  const v1 = initial;
+  const v2 = pending;
+  const v3 = failure<string, number>('');
+  const v4 = success<string, number>(5);
+
+  const or = success(10);
+
+  const v1Result = v1.fold(() => or, () => or, () => or, ok => ok);
+  const v2Result = v2.fold(() => or, () => or, () => or, ok => ok);
+  const v3Result = v3.fold(() => or, () => or, () => or, ok => success(ok));
+  const v4Result = v4.fold(() => or, () => or, () => or, ok => success(ok));
+  expect(v1Result.value).toBe(10)
+  expect(v2Result.value).toBe(10)
+  expect(v3Result.value).toBe(10)
+  expect(v4Result.value).toBe(5)
+
+});
 
 function result(): fc.Arbitrary<Result<string, number>> {
   return fc

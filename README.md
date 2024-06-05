@@ -719,7 +719,7 @@ pending.unwrap({ failure: () => new Error('Custom')}); // throws  custom (Error)
 #### `Result#fold`
 
 ```typescript
-function fold<F, S, D>(onInitial: () => D, onPending: () => D, onFailure: (failure: F) => D, onSuccess: (success: S) => D): S;
+function fold<D>(onInitial: () => D, onPending: () => D, onFailure: (failure: F) => D, onSuccess: (success: S) => D): S;
 ```
 
 - Extracts value from `Result` and converts it to `D` based on the factory
