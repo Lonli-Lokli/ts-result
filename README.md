@@ -50,6 +50,7 @@ const user = getUser(1).map(({ email }) => email);
 - [`fromTry`](#fromTry)
 - [`fromMaybe`](#frommaybe)
 - [`fromEither`](#fromeither)
+- [`fromNullable`](#fromnullable)
 - [`isResult`](#isresult)
 - [`Result#isInitial`](#resultisinitial)
 - [`Result#isPending`](#resultispending)
@@ -307,6 +308,21 @@ Example:
 
 ```typescript
 fromEither(right<string, number>(10)); // Result<string, number>.Success
+```
+
+#### `fromNullable`
+
+```typescript
+function fromNullable<T>(value: T): Result<unknown, NonNullable<T>>;
+```
+
+- Creates `Result` with `Success` state which contain value with `T` type if value is not null or undefined and `initial` otherwise.
+
+Example:
+
+```typescript
+fromNullable(10); // Result<unknown, number>.Success
+fromNullable(null as Nullable<number>); // Result<unknown, number>.Initial
 ```
 
 #### `isResult`

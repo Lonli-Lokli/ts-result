@@ -399,6 +399,10 @@ class ResultConstructor<F, S, T extends ResultType = ResultType>
     );
   }
 
+  static fromNullable<T>(v: T): Result<unknown, NonNullable<T>> {
+    return v === null || v === undefined ? initial : success(v);
+  }
+
   private static _initialInstance: ResultConstructor<
     never,
     never,
@@ -696,6 +700,7 @@ export const {
   fromPromise,
   fromMaybe,
   fromEither,
+  fromNullable,
   chain,
 } = ResultConstructor;
 

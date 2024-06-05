@@ -11,6 +11,7 @@ import {
   mergeInMany,
   fromTry,
   fromPromise,
+  fromNullable,
 } from './ts-result';
 import { just, none } from '@sweet-monads/maybe';
 import { left, right } from '@sweet-monads/either';
@@ -159,6 +160,30 @@ describe('Result', () => {
         expect(r2.isFailure()).toBe(true);
       })
     ));
+
+    test('fromNullable', () =>
+      fc.assert(
+        fc.property(fc.integer(), fc.string(),fc.boolean(),  (int, str, bool) => {
+          const v1: number | undefined = int;
+          const v2: string | undefined = str;
+          const v3: boolean | undefined = bool;
+  
+          const r1 = fromNullable(v1);
+          expect(r1.isSuccess()).toBe(true);
+
+          const r2 = fromNullable(v2);
+          expect(r2.isSuccess()).toBe(true);
+
+          const r3 = fromNullable(v3);
+          expect(r3.isSuccess()).toBe(true);
+  
+          const r4 = fromNullable<string | null>(null);
+          const r5 = fromNullable<string | undefined>(undefined);
+  
+          expect(r4.isInitial()).toBe(true);
+          expect(r5.isInitial()).toBe(true);
+        })
+      ));
 
   test('identity', () =>
     fc.assert(
