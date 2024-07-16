@@ -1,6 +1,6 @@
 {
   "name": "@lonli-lokli/ts-result",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "private": false,
   "sideEffects": false,
   "main": "./cjs/index.js",

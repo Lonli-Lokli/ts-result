@@ -12,7 +12,8 @@ jobs:
           node-version: '18'
       - run: npm i
       - run: npm run test
+      - run: npm run build
       - uses: JS-DevTools/npm-publish@v3
         with:
-          package: packages/ts-result
+          package: build
           token: ${{ secrets.NPM_TOKEN }}
