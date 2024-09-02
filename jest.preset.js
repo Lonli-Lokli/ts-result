@@ -1,6 +1,6 @@
-const nxPreset = require('@nx/jest/preset').default;
+import nxPreset from '@nx/jest/preset.js';
 
-module.exports = {
+export default {
   ...nxPreset,
   /* TODO: Update to latest Jest snapshotFormat
    * By default Nx has kept the older style of Jest Snapshot formats

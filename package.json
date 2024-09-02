@@ -11,7 +11,7 @@
     "build:js": "tsup",
     "build:check": "attw --pack build",
     "lint-staged": "lint-staged",
-    "test": "nx run-many --all --target=test",
+    "test": "nx run ts-result:test",
     "format": "nx format:write",
     "deploy": "cd build && npm publish --access public",
     "lint": "run-s tsc nx run-many --all --target=lint",
