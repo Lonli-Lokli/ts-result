@@ -1,21 +1,22 @@
 {
   "name": "@lonli-lokli/ts-result",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "private": false,
   "sideEffects": false,
-  "main": "./cjs/index.js",
-  "module": "./esm/index.js",
-  "typings": "index.d.ts",
-  "exports": {
-    "import": "./esm/index.js",
-    "require": "./cjs/index.js",
-    "default": "./cjs/index.js"
-  },
+  "main": "dist/index.js",
   "description": "The Result monad represents some result in different states - Initial, Pending, Success and Failure.",
   "repository": {
     "type": "git",
     "url": "https://github.com/Lonli-Lokli/ts-result.git",
     "directory": "packages/ts-result"
+  },
+  "type": "module",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "import": "./dist/index.js",
+      "default": "./dist/index.cjs"
+    }
   },
   "keywords": [
     "Typescript",

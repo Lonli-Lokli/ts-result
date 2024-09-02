@@ -1,10 +1,10 @@
-import { Either, left, right } from '@sweet-monads/either';
+import { type Either, left, right } from '@sweet-monads/either';
 import type {
   Alternative,
   AsyncMonad,
   Container
 } from '@sweet-monads/interfaces';
-import { just, Maybe, none } from '@sweet-monads/maybe';
+import { just, type Maybe, none } from '@sweet-monads/maybe';
 
 const enum ResultType {
   Initial = 'Initial',
