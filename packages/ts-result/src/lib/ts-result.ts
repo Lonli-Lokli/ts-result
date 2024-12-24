@@ -182,7 +182,7 @@ class ResultConstructor<F, S, T extends ResultType = ResultType>
     F1 | F2 | F3 | F4 | F5 | F6 | F7 | F8 | F9 | F10,
     [S1, S2, S3, S4, S5, S6, S7, S8, S9, S10]
   >;
-  static mergeInOne<L, R>(result: Array<Result<L, R>>): Result<L, R[]>;
+  static mergeInOne<F, S>(result: Array<Result<F, S>>): Result<F, S[]>;
   static mergeInOne(results: Array<Result<unknown, unknown>>) {
     return results.reduce(
       (acc: Result<unknown, Array<unknown>>, curr) =>
@@ -681,6 +681,65 @@ class ResultConstructor<F, S, T extends ResultType = ResultType>
   get [Symbol.toStringTag]() {
     return 'Result';
   }
+
+  filter(predicate: (value: S) => boolean): Result<F | S, S> {
+    if (!this.isSuccess()) {
+      return this as Result<F | S, S>;
+    }
+    return predicate(this.value) ? this as Result<F | S, S> : ResultConstructor.failure<F | S, S>(this.value);
+  }
+
+  filterMap<NF, NS>(f: (value: S) => Result<NF, NS>): Result<F | NF, NS> {
+    return this.chain(f);
+  }
+
+  tap(f: (value: S) => void): Result<F, S> {
+    if (this.isSuccess()) {
+      f(this.value);
+    }
+    return this as Result<F, S>;
+  }
+
+  tapFailure(f: (value: F) => void): Result<F, S> {
+    if (this.isFailure()) {
+      f(this.value);
+    }
+    return this as Result<F, S>;
+  }
+
+  recover<NS>(value: NS): Result<F, NS | S> {
+    return this.isSuccess() ? this as Result<F, NS | S> : success(value);
+  }
+
+  recoverWith<NF, NS>(f: (error: F) => Result<NF, NS>): Result<NF, NS | S> {
+    return this.isFailure() 
+      ? f(this.value) 
+      : (this as unknown as Result<NF, NS | S>);
+  }
+
+  zip<F2, S2>(other: Result<F2, S2>): Result<F | F2, [S, S2]> {
+    return this.chain((a) => other.map((b) => [a, b] as [S, S2]));
+  }
+
+  zipWith<F2, S2, R>(
+    other: Result<F2, S2>,
+    f: (a: S, b: S2) => R
+  ): Result<F | F2, R> {
+    return this.chain((a) => other.map((b) => f(a, b)));
+  }
+
+  bimap<NF, NS>(
+    failureMap: (f: F) => NF,
+    successMap: (s: S) => NS
+  ): Result<NF, NS> {
+    if (this.isSuccess()) {
+      return success(successMap(this.value));
+    }
+    if (this.isFailure()) {
+      return failure(failureMap(this.value));
+    }
+    return this as unknown as Result<NF, NS>;
+  }
 }
 
 export type Result<F, S> =
@@ -730,3 +789,9 @@ export const isFailure = <F, S>(
   value: unknown | Result<F, S>
 ): value is ResultConstructor<F, S, ResultType.Failure> =>
   isResult(value) && value.isFailure();
+
+// Helper type to extract the Success type from a Result
+export type Success<T> = T extends Result<any, infer S> ? S : never;
+
+// Helper type to extract the Failure type from a Result
+export type Failure<T> = T extends Result<infer F, any> ? F : never;

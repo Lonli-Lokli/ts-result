@@ -71,27 +71,59 @@ const user = getUser(1).map(({ email }) => email);
 - [`Result#toNullable`](#resulttonullable)
 - [`Result#toUndefined`](#resulttoundefined)
 - [`Result#unwrap`](#resultunwrap)
+- [`Result#unwrapOr`](#resultunwrapor)
+- [`Result#unwrapOrElse`](#resultunwraporelse)
 - [`Result#fold`](#resultfold)
+- [`Result#filter`](#resultfilter)
+- [`Result#filtermap`](#resultfiltermap)
+- [`Result#tap`](#resulttap)
+- [`Result#tapFailure`](#resulttapfailure)
+- [`Result#recover`](#resultrecover)
+- [`Result#recoverWith`](#resultrecoverwith)
+- [`Result#zip`](#resultzip)
+- [`Result#zipWith`](#resultzipwith)
+- [`Result#biMap`](#resultbimap)
 - [`Helpers`](#helpers)
 
 #### `chain`
 
 ```typescript
-function chain<F, S, NF, NS>(fn: (v: S) => Promise<Result<NF, NS>>): (m: Result<F, s>) => Promise<Result<F | NF, NS>>;
+function chain<F, S, NF, NS>(fn: (val: S) => Result<NF, NS>): Result<F | NF, NS>;
 ```
 
-- `fn: (v: S) => Promise<Result<NF, NS>>` - function which should be applied asynchronously to `Result<F, S>` value
-- Returns function with `Result<F, S>` argument and promisied `Result` with new error or mapped by `fn` value (could be used inside `Promise#then` function).
+- Returns a new Result by applying `fn` to the Success value of this Result
+- State handling priority:
+  1. If this Result is `Initial`, returns `Initial`
+  2. If the next Result (returned by `fn`) is `Initial`, returns `Initial`
+  3. If this Result is `Pending` or the next Result is `Pending`, returns `Pending`
+  4. If this Result is `Failure`, returns `Failure` with current value
+  5. If the next Result is `Failure`, returns `Failure` with next value
+  6. Otherwise returns the next Result
 
 Example:
 
 ```typescript
-const getValue = async () => success(1);
-// Result<TypeError, number>
-const result = await getValue()
-  .then(chain(async v => success(v * 2)))
-  .then(chain(async g => failure(new TypeError("Unexpected"))));
+const v1 = success<Error, number>(2);
+const v2 = failure<Error, number>(new Error());
+const v3 = initial;
+
+// Result<Error | TypeError, string>.Success with value "2"
+const newVal1 = v1.chain(a => success<TypeError, string>(a.toString()));
+
+// Result<Error | TypeError, string>.Failure with value new TypeError()
+const newVal2 = v1.chain(a => failure<TypeError, string>(new TypeError()));
+
+// Result<Error | TypeError, string>.Failure with value new Error()
+const newVal3 = v2.chain(a => success<TypeError, string>(a.toString()));
+
+// Result<Error | TypeError, string>.Failure with value new Error()
+const newVal4 = v2.chain(a => failure<TypeError, string>(new TypeError()));
+
+// Result<TypeError, string>.Initial with no value
+const newVal5 = v3.chain(a => failure<TypeError, string>(new TypeError()));
 ```
+
+The chain method is particularly useful when you need to sequence operations that might fail or be in different states. It handles all possible state combinations according to the priority rules above.
 
 #### `merge`
 
@@ -273,7 +305,7 @@ fromTry(() => {
 Returns promise of `Success` if the provided promise fulfilled or `Failure` with the error value if the provided promise rejected.
 
 ```typescript
-function fromPromise<R>(promise: Promise<R>): Promise<Result<unknown, R>>;
+function fromPromise<F, S>(promise: Promise<S>): Promise<Result<F, S>>;
 ```
 
 ```typescript
@@ -328,7 +360,7 @@ fromNullable(null as Nullable<number>); // Result<unknown, number>.Initial
 #### `isResult`
 
 ```typescript
-function isResult<F, S>(value: unknown | Result<F, S>): value is Result<L, R>;
+function isResult<F, S>(value: unknown | Result<F, S>): value is Result<F, S>;
 ```
 
 - Returns `boolean` if given `value` is instance of Result constructor.
@@ -450,10 +482,10 @@ v2.or(v5).or(v3); // v3 will be returned
 #### `Result#join`
 
 ```typescript
-function join<L1, L2, R>(this: Result<L1, Result<L2, R>>): Result<L1 | L2, R>;
+function join<F1, F2, S>(this: Result<F1, Result<F2, S>>): Result<F1 | F2, S>;
 ```
 
-- `this: Result<F1, Result<F2, S>>` - `Result` instance which contains other `Result` instance as `Success` value.
+- `this: Result<F1, Result<F2, R>>` - `Result` instance which contains other `Result` instance as `Success` value.
 - Returns unwrapped `Result` - if current `Result` has `Success` state and inner `Result` has `Success` state then returns inner `Result` `Success`, if inner `Result` has `Failure` state then return inner `Result` `Failure` otherwise outer `Result` `Failure`.
 
 Example:
@@ -547,8 +579,8 @@ const newVal2 = v2.asyncMap(a => Promise.resolve(a.toString()));
 ##### `Result#apply`
 
 ```typescript
-function apply<A, B>(this: Result<L, (a: A) => B>, arg: Result<L, A>): Result<L, B>;
-function apply<A, B>(this: Result<L, A>, fn: Result<L, (a: A) => B>): Result<L, B>;
+function apply<F, S, B>(this: Result<F, (a: S) => B>, arg: Result<F, S>): Result<F, B>;
+function apply<F, S, B>(this: Result<F, S>, fn: Result<F, (a: S) => B>): Result<F, B>;
 ```
 
 - `this | fn` - function wrapped by Result, which should be applied to value `arg`
@@ -574,15 +606,12 @@ const newVal4 = fn2.apply(v2); // Result<Error, number>.Left with value new Erro
 Async variant of [`Result#apply`](#resultapply)
 
 ```typescript
-asyncApply<A, B>(
-  this: Result<F, (a: Promise<A> | A) => Promise<B>>,
-  arg: Result<F, Promise<A>>): Promise<Result<F, B>>;
-asyncApply<A, B>(
-  this: Result<F, Promise<A>>,
-  fn: Result<F, Promise<(a: Promise<A> | A) => B>>): Promise<Result<F, B>>;
-asyncApply<A, B>(
-  this: Result<F, Promise<A>> | Result<F, (a: Promise<A> | A) => Promise<B>>,
-  argOrFn: Result<F, Promise<A>> | Result<F, (a: Promise<A> | A) => Promise<B>>): Promise<Result<F, B>>
+asyncApply<F, S, B>(
+  this: Result<F, (a: Promise<S> | S) => Promise<B>>,
+  arg: Result<F, Promise<S>>): Promise<Result<F, B>>;
+asyncApply<F, S, B>(
+  this: Result<F, Promise<S>>,
+  fn: Result<F, Promise<(a: Promise<S> | S) => B>>): Promise<Result<F, B>>;
 ```
 
 - `this | fn` - function wrapped by Result, which should be applied to value `arg`
@@ -606,10 +635,17 @@ const newVal4 = fn2.asyncApply(v2); // Promise<Either<Error, number>.Left> with 
 #### `Result#chain`
 
 ```typescript
-function chain<F, S, NewF, NewS>(fn: (val: S) => Either<NewF, NewS>): Either<F | NewF, NewS>;
+function chain<F, S, NF, NS>(fn: (val: S) => Result<NF, NS>): Result<F | NF, NS>;
 ```
 
-- Returns mapped by `fn` function value wrapped by `Result` if `Result` is `Success` and returned by `fn` value is `Success` too otherwise `Result` in other state, `Initial` pwns `Pending` and `Failure`.
+- Returns a new Result by applying `fn` to the Success value of this Result
+- State handling priority:
+  1. If this Result is `Initial`, returns `Initial`
+  2. If the next Result (returned by `fn`) is `Initial`, returns `Initial`
+  3. If this Result is `Pending` or the next Result is `Pending`, returns `Pending`
+  4. If this Result is `Failure`, returns `Failure` with current value
+  5. If the next Result is `Failure`, returns `Failure` with next value
+  6. Otherwise returns the next Result
 
 Example:
 
@@ -620,15 +656,21 @@ const v3 = initial;
 
 // Result<Error | TypeError, string>.Success with value "2"
 const newVal1 = v1.chain(a => success<TypeError, string>(a.toString()));
+
 // Result<Error | TypeError, string>.Failure with value new TypeError()
 const newVal2 = v1.chain(a => failure<TypeError, string>(new TypeError()));
+
 // Result<Error | TypeError, string>.Failure with value new Error()
 const newVal3 = v2.chain(a => success<TypeError, string>(a.toString()));
+
 // Result<Error | TypeError, string>.Failure with value new Error()
 const newVal4 = v2.chain(a => failure<TypeError, string>(new TypeError()));
+
 // Result<TypeError, string>.Initial with no value
 const newVal5 = v3.chain(a => failure<TypeError, string>(new TypeError()));
 ```
+
+The chain method is particularly useful when you need to sequence operations that might fail or be in different states. It handles all possible state combinations according to the priority rules above.
 
 ##### `Result#asyncChain`
 
@@ -732,13 +774,53 @@ initial.unwrap(); // throws default (Error)
 pending.unwrap({ failure: () => new Error('Custom')}); // throws  custom (Error)
 ```
 
+#### `Result#unwrapOr`
+
+```typescript
+function unwrapOr<S>(s: S): S;
+```
+
+- Returns the success value if Result is Success, otherwise returns the provided default value.
+
+Example:
+
+```typescript
+const v1 = success<Error, number>(2);
+const v2 = failure<Error, number>(new Error());
+v1.unwrapOr(3); // returns 2
+v2.unwrapOr(3); // returns 3
+```
+#### `Result#unwrapOrElse`
+
+```typescript
+function unwrapOrElse(f: (l: F) => S): S;
+```
+
+- Returns the success value if Result is Success, otherwise returns the result of calling the provided function with the failure value.
+
+
+Example:
+
+```typescript
+const v1 = success<number, number>(2);
+const v2 = failure<number, number>(3);
+v1.unwrapOrElse(x => x * 2); // returns 2
+v2.unwrapOrElse(x => x *2); // returns 6
+```
+
 #### `Result#fold`
 
 ```typescript
-function fold<D>(onInitial: () => D, onPending: () => D, onFailure: (failure: F) => D, onSuccess: (success: S) => D): S;
+function fold<D>(onInitial: () => D, onPending: () => D, onFailure: (failure: F) => D, onSuccess: (success: S) => D): D;
 ```
 
-- Extracts value from `Result` and converts it to `D` based on the factory
+- Transforms the Result value into type D by providing handlers for all possible states
+- Parameters:
+  - `onInitial: () => D` - Handler for Initial state
+  - `onPending: () => D` - Handler for Pending state
+  - `onFailure: (failure: F) => D` - Handler for Failure state, receives the failure value
+  - `onSuccess: (success: S) => D` - Handler for Success state, receives the success value
+- Returns the result of calling the appropriate handler based on the Result state
 
 Example:
 
@@ -747,13 +829,218 @@ const onInitial = () => "it's initial"
 const onPending = () => "it's pending"
 const onFailure = (err) => "it's failure"
 const onSuccess = (data) => `${data + 1}`
-const f = fold(onInitial, onPending, onFailure, onSuccess)
 
-f(initial()) // "it's initial"
-f(pending()) // "it's pending"
-f(failure(new Error('error text'))) // "it's failure"
-f(success(21)) // '22'
+const v1 = initial;
+const v2 = pending;
+const v3 = failure<string, number>('error');
+const v4 = success<string, number>(21);
 
+v1.fold(onInitial, onPending, onFailure, onSuccess) // "it's initial"
+v2.fold(onInitial, onPending, onFailure, onSuccess) // "it's pending"
+v3.fold(onInitial, onPending, onFailure, onSuccess) // "it's failure"
+v4.fold(onInitial, onPending, onFailure, onSuccess) // "22"
+```
+
+The fold method is particularly useful when you need to handle all possible states of a Result and transform them into a single type. This pattern is common when you need to:
+- Display different UI states
+- Convert Result states into a common format
+- Handle all possible outcomes in a type-safe way
+
+#### `Result#filter`
+
+```typescript
+function filter(predicate: (value: S) => boolean): Result<F | S, S>;
+```
+
+Validates a Success value using a predicate. If the predicate returns false, converts the Success to a Failure using the success value.
+
+```typescript
+// Age validation
+const age = success<string, number>(15);
+const isAdult = age.filter(age => age >= 18);
+// Result<string | number, number>.Failure with value 15
+
+// Chaining validations
+const validAge = success<string, number>(25)
+  .filter(age => age >= 0)    // minimum age
+  .filter(age => age <= 120); // maximum age
+// Result<string | number, number>.Success with value 25
+```
+
+#### `Result#filterMap`
+
+```typescript
+function filterMap<NS>(f: (value: S) => Result<S, NS>): Result<F | S, NS>;
+```
+
+Combines filtering and mapping in one operation. Useful for transformations that might fail.
+
+```typescript
+const parseIfPositive = (n: number) => 
+  n > 0 ? success(n.toString()) : failure(n);
+
+success(5).filterMap(parseIfPositive)
+// Result<number, string>.Success with value "5"
+
+success(-1).filterMap(parseIfPositive)
+// Result<number, string>.Failure with value -1
+```
+
+```typescript
+failure('error').filter(x => true)    // stays Failure
+initial.filter(x => true)             // stays Initial
+pending.filter(x => true)             // stays Pending
+
+failure('error').filterMap(fn)        // stays Failure
+initial.filterMap(fn)                 // stays Initial
+pending.filterMap(fn)                 // stays Pending
+```
+
+#### `Result#tap`
+
+```typescript
+function tap(f: (value: S) => void): Result<F, S>;
+```
+
+Executes a side effect function if the Result is Success, then returns the original Result unchanged.
+Useful for logging, debugging, or other side effects without modifying the Result chain.
+
+```typescript
+success(5)
+  .tap(x => console.log('Value:', x)) // logs "Value: 5"
+  .map(x => x * 2);                   // Result<never, number>.Success(10)
+
+failure('error')
+  .tap(x => console.log('Value:', x)) // nothing logged
+  .map(x => x * 2);                   // Result<string, number>.Failure('error')
+```
+
+#### `Result#tapFailure`
+
+```typescript
+function tapFailure(f: (value: F) => void): Result<F, S>;
+```
+
+Executes a side effect function if the Result is Failure, then returns the original Result unchanged.
+Useful for error logging or debugging without modifying the Result chain.
+
+```typescript
+success<Error, number>(5)
+  .tapFailure(e => console.error(e)) // nothing logged
+  .map(x => x * 2);                  // Result<Error, number>.Success(10)
+
+failure(new Error('oops'))
+  .tapFailure(e => console.error(e)) // logs Error: oops
+  .map(x => x * 2);                  // Result<Error, number>.Failure(Error: oops)
+```
+
+
+#### `Result#recover`
+
+```typescript
+function recover(value: S): Result<F, S>;
+```
+
+Recovers from a Failure state by providing a default success value.
+
+```typescript
+const v1 = failure<string, number>('error');
+const v2 = success<string, number>(5);
+
+v1.recover(42);  // Result<string, number>.Success with value 42
+v2.recover(42);  // Result<string, number>.Success with value 5 (unchanged)
+```
+
+#### `Result#recoverWith`
+
+```typescript
+function recoverWith<NF, NS>(f: (error: F) => Result<NF, NS>): Result<NF, NS | S>;
+```
+
+Recovers from a Failure state by applying a function that returns a new Result.
+Useful for handling specific error cases differently or transforming errors.
+
+```typescript
+const handler = (error: string): Result<Error, number> => 
+  error === 'known' ? success(42) : failure(new Error('still failed'));
+
+failure('known').recoverWith(handler);     // Result<Error, number>.Success(42)
+failure('unknown').recoverWith(handler);    // Result<Error, number>.Failure(Error: still failed)
+success<string, number>(5).recoverWith(handler); // Result<Error, number>.Success(5)
+
+// Initial and Pending states pass through
+initial.recoverWith(handler);              // Result.Initial
+pending.recoverWith(handler);              // Result.Pending
+```
+
+
+#### `Result#zip`
+
+```typescript
+function zip<F2, S2>(other: Result<F2, S2>): Result<F | F2, [S, S2]>;
+```
+
+Combines two Results into a Result containing a tuple of their success values.
+Returns Failure if either Result is a Failure.
+
+```typescript
+const num = success<string, number>(2);
+const str = success<Error, string>('test');
+
+num.zip(str) // Result<string | Error, [number, string]>.Success([2, 'test'])
+num.zip(failure('error')) // Result<string | Error, [number, string]>.Failure('error')
+```
+
+#### `Result#zipWith`
+
+```typescript
+function zipWith<F2, S2, R>(
+  other: Result<F2, S2>,
+  f: (a: S, b: S2) => R
+): Result<F | F2, R>;
+```
+
+Combines two Results using a function. Returns Failure if either Result is a Failure.
+
+```typescript
+const num1 = success<string, number>(2);
+const num2 = success<Error, number>(3);
+
+num1.zipWith(num2, (a, b) => a + b) // Result<string | Error, number>.Success(5)
+num1.zipWith(failure('error'), (a, b) => a + b) // Result<string | Error, number>.Failure('error')
+```
+
+#### `Result#bimap`
+
+```typescript
+function bimap<NF, NS>(
+  failureMap: (f: F) => NF,
+  successMap: (s: S) => NS
+): Result<NF, NS>;
+```
+
+Maps both the Failure and Success values of a Result simultaneously. Useful for transforming both possible outcomes in one operation.
+
+```typescript
+const result = success<string, number>(42);
+
+// Transform both success and failure values
+const transformed = result.bimap(
+  (error: string) => new Error(error), // transform failure
+  (value: number) => value.toString()  // transform success
+);
+// Result<Error, string>.Success('42')
+
+const failed = failure<string, number>('oops');
+const transformedFailure = failed.bimap(
+  (error: string) => new Error(error),
+  (value: number) => value.toString()
+);
+// Result<Error, string>.Failure(Error: oops)
+
+// Initial and Pending states pass through unchanged
+initial.bimap(f, s)  // Result.Initial
+pending.bimap(f, s)  // Result.Pending
 ```
 
 #### Helpers
@@ -764,19 +1051,6 @@ const { value } = success<Error, number>(2); // number | Error | undefined
 const { value } = success(2); // number | undefined
 const { value } = failure<Error, number>(new Error()); // number | Error | undefined
 const { value } = failure(new Error()); // Error | undefined
-```
-
-```typescript
-success(2).unwrap() // number
-failure(new TypeError()).unwrap() // throws
-failure(2).unwrap() // throws  (don't do this)
-
-failure(2).unwrapOr(3) // returns 3
-success(2).unwrapOr(3) // returns 2
-
-failure(2).unwrapOrElse(num => num * 2) // returns 4
-success(2).unwrapOrElse(num => num * 2) // returns 2
-
 ```
 
 ## Development

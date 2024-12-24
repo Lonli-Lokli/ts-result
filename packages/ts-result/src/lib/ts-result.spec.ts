@@ -555,3 +555,178 @@ function result(): fc.Arbitrary<Result<string, number>> {
     })
     .noBias();
 }
+
+describe('filter/filterMap', () => {
+  test('filter', () => {
+    // Basic filtering
+    expect(success(5).filter(x => x > 3).isSuccess()).toBe(true);
+    expect(success(2).filter(x => x > 3).isFailure()).toBe(true);
+    
+    // Non-success states pass through
+    expect(failure<string, number>('error').filter(x => x > 3).isFailure()).toBe(true);
+    expect(initial.filter(x => x > 3).isInitial()).toBe(true);
+    expect(pending.filter(x => x > 3).isPending()).toBe(true);
+
+    // Failure contains the rejected value
+    const result = success<string, number>(2).filter(x => x > 3);
+    expect(result.isFailure() && result.value).toBe(2);
+  });
+
+  test('filterMap', () => {
+    const parseIfPositive = (n: number) => 
+      n > 0 ? success(n.toString()) : failure(n);
+
+    // Success case
+    expect(success(5).filterMap(parseIfPositive).unwrapOr('')).toBe('5');
+    
+    // Failure case
+    expect(success(-1).filterMap(parseIfPositive).isFailure()).toBe(true);
+    
+    // Non-success states pass through
+    expect(failure<string, number>('error').filterMap(parseIfPositive).isFailure()).toBe(true);
+    expect(initial.filterMap(parseIfPositive).isInitial()).toBe(true);
+    expect(pending.filterMap(parseIfPositive).isPending()).toBe(true);
+  });
+});
+
+describe('tap/tapFailure', () => {
+  test('tap', () => {
+    let sideEffect = 0;
+    const tap = (x: number) => { sideEffect = x; };
+
+    // Success executes side effect
+    success(5).tap(tap);
+    expect(sideEffect).toBe(5);
+
+    // Other states don't execute side effect
+    sideEffect = 0;
+    failure<number, number>(3).tap(tap);
+    expect(sideEffect).toBe(0);
+
+    initial.tap(tap);
+    expect(sideEffect).toBe(0);
+
+    pending.tap(tap);
+    expect(sideEffect).toBe(0);
+  });
+
+  test('tapFailure', () => {
+    let sideEffect = 0;
+    const tap = (x: number) => { sideEffect = x; };
+
+    // Failure executes side effect
+    failure(5).tapFailure(tap);
+    expect(sideEffect).toBe(5);
+
+    // Other states don't execute side effect
+    sideEffect = 0;
+    success<number, number>(3).tapFailure(tap);
+    expect(sideEffect).toBe(0);
+
+    initial.tapFailure(tap);
+    expect(sideEffect).toBe(0);
+
+    pending.tapFailure(tap);
+    expect(sideEffect).toBe(0);
+  });
+});
+
+describe('recover/recoverWith', () => {
+  test('recover', () => {
+    // Recovers from failure
+    expect(failure<string, number>('error').recover(42).unwrapOr(0)).toBe(42);
+    
+    // Doesn't affect success
+    expect(success<string, number>(5).recover(42).unwrapOr(0)).toBe(5);
+    
+    // Recovers from initial/pending
+    expect(initial.recover(42).unwrapOr(0)).toBe(42);
+    expect(pending.recover(42).unwrapOr(0)).toBe(42);
+  });
+
+  test('recoverWith', () => {
+    const handler = (error: string): Result<string, number> => 
+      error === 'known' ? success(42) : failure('still failed');
+
+    // Recovers from known error
+    expect(failure<string, number>('known').recoverWith(handler).unwrapOr(0)).toBe(42);
+    
+    // Propagates new failure for unknown error
+    expect(failure<string, number>('unknown').recoverWith(handler).isFailure()).toBe(true);
+    
+    // Doesn't affect success
+    expect(success<string, number>(5).recoverWith(handler).unwrapOr(0)).toBe(5);
+    
+    // Doesn't affect initial/pending
+    expect(initial.recoverWith(handler).isInitial()).toBe(true);
+    expect(pending.recoverWith(handler).isPending()).toBe(true);
+  });
+});
+
+describe('zip/zipWith', () => {
+  test('zip', () => {
+    const v1 = success<string, number>(2);
+    const v2 = success<Error, string>('test');
+    const v3 = failure<string, number>('error');
+    
+    // Success cases
+    expect(v1.zip(v2).unwrapOr([0, ''])).toEqual([2, 'test']);
+    
+    // Failure cases
+    expect(v1.zip(v3).isFailure()).toBe(true);
+    expect(v3.zip(v2).isFailure()).toBe(true);
+    
+    // Initial/Pending cases
+    expect(v1.zip(initial).isInitial()).toBe(true);
+    expect(v1.zip(pending).isPending()).toBe(true);
+    expect(initial.zip(v1).isInitial()).toBe(true);
+    expect(pending.zip(v1).isPending()).toBe(true);
+  });
+
+  test('zipWith', () => {
+    const v1 = success<string, number>(2);
+    const v2 = success<Error, number>(3);
+    const v3 = failure<string, number>('error');
+    
+    const add = (a: number, b: number) => a + b;
+    
+    // Success cases
+    expect(v1.zipWith(v2, add).unwrapOr(0)).toBe(5);
+    
+    // Failure cases
+    expect(v1.zipWith(v3, add).isFailure()).toBe(true);
+    expect(v3.zipWith(v2, add).isFailure()).toBe(true);
+    
+    // Initial/Pending cases
+    expect(v1.zipWith(initial, add).isInitial()).toBe(true);
+    expect(v1.zipWith(pending, add).isPending()).toBe(true);
+    expect(initial.zipWith(v1, add).isInitial()).toBe(true);
+    expect(pending.zipWith(v1, add).isPending()).toBe(true);
+  });
+});
+
+describe('bifunctor', () => {
+  test('bimap', () => {
+    const toString = (x: number) => x.toString();
+    const toError = (s: string) => new Error(s);
+
+    // Success case
+    const v1 = success<string, number>(42);
+    const r1 = v1.bimap(toError, toString);
+    expect(r1.isSuccess()).toBe(true);
+    expect(r1.unwrapOr('')).toBe('42');
+
+    // Failure case
+    const v2 = failure<string, number>('error');
+    const r2 = v2.bimap(toError, toString);
+    expect(r2.isFailure()).toBe(true);
+    if (r2.isFailure()) {
+      expect(r2.value).toBeInstanceOf(Error);
+      expect(r2.value.message).toBe('error');
+    }
+
+    // Initial/Pending pass through
+    expect(initial.bimap(toError, toString).isInitial()).toBe(true);
+    expect(pending.bimap(toError, toString).isPending()).toBe(true);
+  });
+});
