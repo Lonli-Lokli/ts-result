@@ -12,6 +12,7 @@ import {
   fromTry,
   fromPromise,
   fromNullable,
+  mergeWithConfig,
 } from './ts-result';
 import { just, none } from '@sweet-monads/maybe';
 import { left, right } from '@sweet-monads/either';
@@ -29,7 +30,7 @@ describe('Result', () => {
       expect(input.isPending()).toBe(pending);
       expect(input.isSuccess()).toBe(success);
       expect(input.isFailure()).toBe(failure);
-    }
+    },
   );
 
   test('merge states', () =>
@@ -49,13 +50,13 @@ describe('Result', () => {
           expect(merged.isInitial()).toBe(i.length > 0);
           expect(merged.isPending()).toBe(i.length === 0 && p.length > 0);
           expect(merged.isFailure()).toBe(
-            i.length === 0 && p.length === 0 && f.length > 0
+            i.length === 0 && p.length === 0 && f.length > 0,
           );
           expect(merged.isSuccess()).toBe(
-            i.length === 0 && p.length === 0 && f.length === 0 && s.length >= 0
+            i.length === 0 && p.length === 0 && f.length === 0 && s.length >= 0,
           );
-        }
-      )
+        },
+      ),
     ));
 
   test('merge types', () =>
@@ -79,7 +80,7 @@ describe('Result', () => {
           expect(r3.value).toStrictEqual([int, str]);
         }
         expect(r4.isFailure()).toBe(true);
-      })
+      }),
     ));
 
   test('fromMaybe', () =>
@@ -93,7 +94,7 @@ describe('Result', () => {
 
         const r2 = fromMaybe(v2);
         expect(r2.isInitial()).toBe(true);
-      })
+      }),
     ));
 
   test('success', () =>
@@ -103,7 +104,7 @@ describe('Result', () => {
         expect(r1.isSuccess()).toBe(true);
 
         expect(r1.value).toBe(int);
-      })
+      }),
     ));
 
   test('fromTry', () =>
@@ -124,7 +125,7 @@ describe('Result', () => {
         expect(v1.unwrap()).toBe(int);
         expect(v2.unwrap()).toBe(str);
         expect(v3.value).toBe(error);
-      })
+      }),
     ));
 
   test('fromPromise', async () =>
@@ -143,7 +144,7 @@ describe('Result', () => {
         expect(v1.unwrap()).toBe(int);
         expect(v2.unwrap()).toBe(str);
         expect(v3.value).toBe(error);
-      })
+      }),
     ));
 
   test('fromEither', () =>
@@ -158,32 +159,32 @@ describe('Result', () => {
         const r2 = fromEither(v2);
 
         expect(r2.isFailure()).toBe(true);
-      })
+      }),
     ));
 
-    test('fromNullable', () =>
-      fc.assert(
-        fc.property(fc.integer(), fc.string(),fc.boolean(),  (int, str, bool) => {
-          const v1: number | undefined = int;
-          const v2: string | undefined = str;
-          const v3: boolean | undefined = bool;
-  
-          const r1 = fromNullable(v1);
-          expect(r1.isSuccess()).toBe(true);
+  test('fromNullable', () =>
+    fc.assert(
+      fc.property(fc.integer(), fc.string(), fc.boolean(), (int, str, bool) => {
+        const v1: number | undefined = int;
+        const v2: string | undefined = str;
+        const v3: boolean | undefined = bool;
 
-          const r2 = fromNullable(v2);
-          expect(r2.isSuccess()).toBe(true);
+        const r1 = fromNullable(v1);
+        expect(r1.isSuccess()).toBe(true);
 
-          const r3 = fromNullable(v3);
-          expect(r3.isSuccess()).toBe(true);
-  
-          const r4 = fromNullable<string | null>(null);
-          const r5 = fromNullable<string | undefined>(undefined);
-  
-          expect(r4.isInitial()).toBe(true);
-          expect(r5.isInitial()).toBe(true);
-        })
-      ));
+        const r2 = fromNullable(v2);
+        expect(r2.isSuccess()).toBe(true);
+
+        const r3 = fromNullable(v3);
+        expect(r3.isSuccess()).toBe(true);
+
+        const r4 = fromNullable<string | null>(null);
+        const r5 = fromNullable<string | undefined>(undefined);
+
+        expect(r4.isInitial()).toBe(true);
+        expect(r5.isInitial()).toBe(true);
+      }),
+    ));
 
   test('identity', () =>
     fc.assert(
@@ -211,7 +212,7 @@ describe('Result', () => {
           expect(v5.value).toBe(bool);
         }
         expect(v6.isFailure()).toBe(true);
-      })
+      }),
     ));
 
   test('or', () =>
@@ -220,7 +221,7 @@ describe('Result', () => {
         const result = x.or(y);
         expect(result.isSuccess()).toBe(x.isSuccess() || y.isSuccess());
         expect(result).toBe(x.isSuccess() ? x : y);
-      })
+      }),
     ));
 
   test('join', () => {
@@ -341,7 +342,7 @@ test('asyncApply', () => {
   const v1 = success<Error, number>(2);
   const v2 = failure<Error, number>(new Error());
   const fn1 = success<Error, (a: number) => Promise<number>>((a: number) =>
-    Promise.resolve(a * 2)
+    Promise.resolve(a * 2),
   );
   const fn2 = failure<Error, (a: number) => Promise<number>>(new Error());
 
@@ -381,23 +382,23 @@ test('asyncChain', async () => {
 
   // Result<Error | TypeError, string>.Success with value "2"
   const newVal1 = v1.asyncChain((a) =>
-    Promise.resolve(success<TypeError, string>(a.toString()))
+    Promise.resolve(success<TypeError, string>(a.toString())),
   );
   // Result<Error | TypeError, string>.Failure with value new TypeError()
   const newVal2 = v1.asyncChain(() =>
-    Promise.resolve(failure<TypeError, string>(new TypeError()))
+    Promise.resolve(failure<TypeError, string>(new TypeError())),
   );
   // Result<Error | TypeError, string>.Failure with value new Error()
   const newVal3 = v2.asyncChain((a) =>
-    Promise.resolve(success<TypeError, string>(a.toString()))
+    Promise.resolve(success<TypeError, string>(a.toString())),
   );
   // Result<Error | TypeError, string>.Failure with value new Error()
   const newVal4 = v2.asyncChain(() =>
-    Promise.resolve(failure<TypeError, string>(new TypeError()))
+    Promise.resolve(failure<TypeError, string>(new TypeError())),
   );
   // Result<Error | TypeError, string>.Initial with no value
   const newVal5 = v3.asyncChain(() =>
-    Promise.resolve(failure<TypeError, string>(new TypeError()))
+    Promise.resolve(failure<TypeError, string>(new TypeError())),
   );
 
   expect((await newVal1).isSuccess()).toBe(true);
@@ -412,10 +413,10 @@ test('toEither', () =>
     fc.property(result(), (r) => {
       const either = r.toEither(
         () => 'i',
-        () => 'p'
+        () => 'p',
       );
       expect(either.isLeft()).toBe(
-        r.isInitial() || r.isPending() || r.isFailure()
+        r.isInitial() || r.isPending() || r.isFailure(),
       );
       expect(either.isRight()).toBe(r.isSuccess());
       if (r.isInitial()) {
@@ -428,7 +429,7 @@ test('toEither', () =>
       if (r.isFailure()) {
         expect(either.value).toBe(r.value);
       }
-    })
+    }),
   ));
 
 test('toMaybe', () =>
@@ -436,13 +437,13 @@ test('toMaybe', () =>
     fc.property(result(), (r) => {
       const maybe = r.toMaybe();
       expect(maybe.isNone()).toBe(
-        r.isInitial() || r.isPending() || r.isFailure()
+        r.isInitial() || r.isPending() || r.isFailure(),
       );
       expect(maybe.isJust()).toBe(r.isSuccess());
       if (r.isSuccess()) {
         expect(maybe.value).toBe(r.value);
       }
-    })
+    }),
   ));
 
 test('toNullable', () =>
@@ -455,7 +456,7 @@ test('toNullable', () =>
       } else {
         expect(nullable).not.toBeNull();
       }
-    })
+    }),
   ));
 
 test('toUndefined', () =>
@@ -468,7 +469,7 @@ test('toUndefined', () =>
       } else {
         expect(nullable).not.toBeUndefined();
       }
-    })
+    }),
   ));
 
 test('mergeInMany', () =>
@@ -477,18 +478,18 @@ test('mergeInMany', () =>
       const r1 = mergeInMany([x, y]);
       expect(r1.isSuccess()).toBe(x.isSuccess() && y.isSuccess());
       // expect(r1.isFailure()).toBe(x.isFailure() || y.isFailure());
-    })
+    }),
   ));
 
 test('unwrap', () => {
   expect(success(2).unwrap()).toBe(2);
   expect(() => failure(new TypeError()).unwrap()).toThrow(
-    'Result state is not Right'
+    'Result state is not Right',
   );
   expect(() => failure(2).unwrap()).toThrow('Result state is not Right');
-  expect(() =>
-    pending.unwrap({ pending: () => new Error('Custom') })
-  ).toThrow('Custom');
+  expect(() => pending.unwrap({ pending: () => new Error('Custom') })).toThrow(
+    'Custom',
+  );
 });
 
 test('toString', () => {
@@ -496,7 +497,7 @@ test('toString', () => {
   expect(failure(1).toString()).toBe('[object Result]');
 });
 
-test("unwrapOr", () => {
+test('unwrapOr', () => {
   const v1 = success<Error, number>(2);
   const v2 = failure<Error, number>(new Error());
 
@@ -504,16 +505,15 @@ test("unwrapOr", () => {
   expect(v2.unwrapOr(3)).toBe(3);
 });
 
-test("unwrapOrElse", () => {
+test('unwrapOrElse', () => {
   const v1 = success<number, number>(2);
   const v2 = failure<number, number>(3);
 
-  expect(v1.unwrapOrElse(x => x * 2)).toBe(2);
-  expect(v2.unwrapOrElse(x => x * 2)).toBe(6);
+  expect(v1.unwrapOrElse((x) => x * 2)).toBe(2);
+  expect(v2.unwrapOrElse((x) => x * 2)).toBe(6);
 });
 
-
-test("fold", () => {
+test('fold', () => {
   const v1 = initial;
   const v2 = pending;
   const v3 = failure<string, number>('');
@@ -521,15 +521,34 @@ test("fold", () => {
 
   const or = success(10);
 
-  const v1Result = v1.fold(() => or, () => or, () => or, ok => ok);
-  const v2Result = v2.fold(() => or, () => or, () => or, ok => ok);
-  const v3Result = v3.fold(() => or, () => or, () => or, ok => success(ok));
-  const v4Result = v4.fold(() => or, () => or, () => or, ok => success(ok));
-  expect(v1Result.value).toBe(10)
-  expect(v2Result.value).toBe(10)
-  expect(v3Result.value).toBe(10)
-  expect(v4Result.value).toBe(5)
-
+  const v1Result = v1.fold(
+    () => or,
+    () => or,
+    () => or,
+    (ok) => ok,
+  );
+  const v2Result = v2.fold(
+    () => or,
+    () => or,
+    () => or,
+    (ok) => ok,
+  );
+  const v3Result = v3.fold(
+    () => or,
+    () => or,
+    () => or,
+    (ok) => success(ok),
+  );
+  const v4Result = v4.fold(
+    () => or,
+    () => or,
+    () => or,
+    (ok) => success(ok),
+  );
+  expect(v1Result.value).toBe(10);
+  expect(v2Result.value).toBe(10);
+  expect(v3Result.value).toBe(10);
+  expect(v4Result.value).toBe(5);
 });
 
 function result(): fc.Arbitrary<Result<string, number>> {
@@ -559,31 +578,45 @@ function result(): fc.Arbitrary<Result<string, number>> {
 describe('filter/filterMap', () => {
   test('filter', () => {
     // Basic filtering
-    expect(success(5).filter(x => x > 3).isSuccess()).toBe(true);
-    expect(success(2).filter(x => x > 3).isFailure()).toBe(true);
-    
+    expect(
+      success(5)
+        .filter((x) => x > 3)
+        .isSuccess(),
+    ).toBe(true);
+    expect(
+      success(2)
+        .filter((x) => x > 3)
+        .isFailure(),
+    ).toBe(true);
+
     // Non-success states pass through
-    expect(failure<string, number>('error').filter(x => x > 3).isFailure()).toBe(true);
-    expect(initial.filter(x => x > 3).isInitial()).toBe(true);
-    expect(pending.filter(x => x > 3).isPending()).toBe(true);
+    expect(
+      failure<string, number>('error')
+        .filter((x) => x > 3)
+        .isFailure(),
+    ).toBe(true);
+    expect(initial.filter((x) => x > 3).isInitial()).toBe(true);
+    expect(pending.filter((x) => x > 3).isPending()).toBe(true);
 
     // Failure contains the rejected value
-    const result = success<string, number>(2).filter(x => x > 3);
+    const result = success<string, number>(2).filter((x) => x > 3);
     expect(result.isFailure() && result.value).toBe(2);
   });
 
   test('filterMap', () => {
-    const parseIfPositive = (n: number) => 
+    const parseIfPositive = (n: number) =>
       n > 0 ? success(n.toString()) : failure(n);
 
     // Success case
     expect(success(5).filterMap(parseIfPositive).unwrapOr('')).toBe('5');
-    
+
     // Failure case
     expect(success(-1).filterMap(parseIfPositive).isFailure()).toBe(true);
-    
+
     // Non-success states pass through
-    expect(failure<string, number>('error').filterMap(parseIfPositive).isFailure()).toBe(true);
+    expect(
+      failure<string, number>('error').filterMap(parseIfPositive).isFailure(),
+    ).toBe(true);
     expect(initial.filterMap(parseIfPositive).isInitial()).toBe(true);
     expect(pending.filterMap(parseIfPositive).isPending()).toBe(true);
   });
@@ -592,7 +625,9 @@ describe('filter/filterMap', () => {
 describe('tap/tapFailure', () => {
   test('tap', () => {
     let sideEffect = 0;
-    const tap = (x: number) => { sideEffect = x; };
+    const tap = (x: number) => {
+      sideEffect = x;
+    };
 
     // Success executes side effect
     success(5).tap(tap);
@@ -612,7 +647,9 @@ describe('tap/tapFailure', () => {
 
   test('tapFailure', () => {
     let sideEffect = 0;
-    const tap = (x: number) => { sideEffect = x; };
+    const tap = (x: number) => {
+      sideEffect = x;
+    };
 
     // Failure executes side effect
     failure(5).tapFailure(tap);
@@ -635,28 +672,32 @@ describe('recover/recoverWith', () => {
   test('recover', () => {
     // Recovers from failure
     expect(failure<string, number>('error').recover(42).unwrapOr(0)).toBe(42);
-    
+
     // Doesn't affect success
     expect(success<string, number>(5).recover(42).unwrapOr(0)).toBe(5);
-    
+
     // Recovers from initial/pending
     expect(initial.recover(42).unwrapOr(0)).toBe(42);
     expect(pending.recover(42).unwrapOr(0)).toBe(42);
   });
 
   test('recoverWith', () => {
-    const handler = (error: string): Result<string, number> => 
+    const handler = (error: string): Result<string, number> =>
       error === 'known' ? success(42) : failure('still failed');
 
     // Recovers from known error
-    expect(failure<string, number>('known').recoverWith(handler).unwrapOr(0)).toBe(42);
-    
+    expect(
+      failure<string, number>('known').recoverWith(handler).unwrapOr(0),
+    ).toBe(42);
+
     // Propagates new failure for unknown error
-    expect(failure<string, number>('unknown').recoverWith(handler).isFailure()).toBe(true);
-    
+    expect(
+      failure<string, number>('unknown').recoverWith(handler).isFailure(),
+    ).toBe(true);
+
     // Doesn't affect success
     expect(success<string, number>(5).recoverWith(handler).unwrapOr(0)).toBe(5);
-    
+
     // Doesn't affect initial/pending
     expect(initial.recoverWith(handler).isInitial()).toBe(true);
     expect(pending.recoverWith(handler).isPending()).toBe(true);
@@ -668,14 +709,14 @@ describe('zip/zipWith', () => {
     const v1 = success<string, number>(2);
     const v2 = success<Error, string>('test');
     const v3 = failure<string, number>('error');
-    
+
     // Success cases
     expect(v1.zip(v2).unwrapOr([0, ''])).toEqual([2, 'test']);
-    
+
     // Failure cases
     expect(v1.zip(v3).isFailure()).toBe(true);
     expect(v3.zip(v2).isFailure()).toBe(true);
-    
+
     // Initial/Pending cases
     expect(v1.zip(initial).isInitial()).toBe(true);
     expect(v1.zip(pending).isPending()).toBe(true);
@@ -687,16 +728,16 @@ describe('zip/zipWith', () => {
     const v1 = success<string, number>(2);
     const v2 = success<Error, number>(3);
     const v3 = failure<string, number>('error');
-    
+
     const add = (a: number, b: number) => a + b;
-    
+
     // Success cases
     expect(v1.zipWith(v2, add).unwrapOr(0)).toBe(5);
-    
+
     // Failure cases
     expect(v1.zipWith(v3, add).isFailure()).toBe(true);
     expect(v3.zipWith(v2, add).isFailure()).toBe(true);
-    
+
     // Initial/Pending cases
     expect(v1.zipWith(initial, add).isInitial()).toBe(true);
     expect(v1.zipWith(pending, add).isPending()).toBe(true);
@@ -728,5 +769,77 @@ describe('bifunctor', () => {
     // Initial/Pending pass through
     expect(initial.bimap(toError, toString).isInitial()).toBe(true);
     expect(pending.bimap(toError, toString).isPending()).toBe(true);
+  });
+});
+
+describe('Result combining methods', () => {
+  const results = [
+    success<string, number>(1),
+    failure('error'),
+    initial as Result<string, number>,
+    pending as Result<string, number>,
+  ];
+
+  describe('mergeWithPriority', () => {
+    test('default behavior prioritizes Initial/Pending over Failure', () => {
+      // Initial takes precedence
+      expect(
+        mergeWithConfig(results, { priority: 'pending' }).isInitial(),
+      ).toBe(true);
+
+      // Pending takes precedence if no Initial
+      const withoutInitial = results.filter((r) => !r.isInitial());
+      expect(
+        mergeWithConfig(withoutInitial, { priority: 'pending' }).isPending(),
+      ).toBe(true);
+
+      // Failure only if no Initial/Pending
+      const onlySuccessAndFailure = [success(1), failure('error')];
+      expect(
+        mergeWithConfig(onlySuccessAndFailure, {
+          priority: 'pending',
+        }).isFailure(),
+      ).toBe(true);
+    });
+
+    test('strict mode prioritizes Failures over Initial/Pending', () => {
+      // Failure takes precedence in strict mode
+      const merged = mergeWithConfig(results, { priority: 'failure' });
+      expect(merged.isFailure()).toBe(true);
+      if (merged.isFailure()) {
+        expect(merged.value).toBe('error');
+      }
+    });
+
+    test('success case works the same in both modes', () => {
+      const successResults = [success(1), success(2)];
+      const defaultMerge = mergeWithConfig(successResults, { priority: 'pending' });
+      const strictMerge = mergeWithConfig(successResults, { priority: 'failure' });
+
+      expect(defaultMerge.unwrapOr([])).toEqual([1, 2]);
+      expect(strictMerge.unwrapOr([])).toEqual([1, 2]);
+    });
+  });
+
+  describe('merge/mergeInOne', () => {
+    test('combines success values in order', () => {
+      const successResults = [success(1), success(2)];
+      expect(merge(successResults).unwrapOr([])).toEqual([1, 2]);
+    });
+
+    test('returns first failure encountered', () => {
+      const withFailure = [success(1), failure('error'), success(2)];
+      expect(merge(withFailure).isFailure()).toBe(true);
+    });
+
+    test('preserves initial state', () => {
+      const withInitial = [success(1), initial, success(2)];
+      expect(merge(withInitial).isInitial()).toBe(true);
+    });
+
+    test('preserves pending state', () => {
+      const withPending = [success(1), pending, success(2)];
+      expect(merge(withPending).isPending()).toBe(true);
+    });
   });
 });

@@ -39,6 +39,7 @@ const user = getUser(1).map(({ email }) => email);
 
 - [`chain`](#chain)
 - [`merge`](#merge)
+- [`mergeWithConfig`](#mergewithconfig)
 - [`mergeInOne`](#mergeinone)
 - [`mergeInMany`](#mergeinmany)
 - [`initial`](#initial)
@@ -154,6 +155,37 @@ const r1 = merge([v1, v2]); // Result<never, [number, number]>.Initial
 const r2 = merge([v2, v5]); // Result<Error, [never, boolean]>.Pending
 const r3 = merge([v3, v4]); // Result<TypeError | ReferenceError, [number, string]>.Success
 const r4 = merge([v3, v4, v5]); // Result<TypeError | Error | ReferenceError, [number, string, boolean]>.Failure
+```
+#### `mergeWithConfig`
+
+```typescript
+function mergeWithConfig<F, S>(values: Result<F, S>[], config: { priority: 'failure' | 'pending' }): Result<F, S[]>;
+```
+
+Merges an array of Results with configurable priority between states.
+
+Default behavior (priority: 'pending'):
+1. Returns Initial if ANY Result is Initial
+2. Returns Pending if ANY Result is Pending (and none are Initial)
+3. Returns Failure if ANY Result is Failure (and none are Initial/Pending)
+4. Returns Success only if ALL Results are Success
+
+Failure priority (priority: 'failure'):
+1. Returns Failure if ANY Result is Failure
+2. Returns Initial if ANY Result is Initial
+3. Returns Pending if ANY Result is Pending
+4. Returns Success only if ALL Results are Success
+
+```typescript
+const v1 = success<string, number>(1);
+const v2 = failure('error');
+const v3 = pending as Result<string, number>;
+
+// Default behavior - Pending takes precedence
+mergeWithConfig([v1, v2, v3], { priority: 'pending' }); // Result.Pending
+
+// Failure priority
+mergeWithConfig([v1, v2, v3], { priority: 'failure' }); // Result.Failure('error')
 ```
 
 #### `mergeInOne`
