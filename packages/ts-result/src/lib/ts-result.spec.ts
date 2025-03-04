@@ -813,8 +813,12 @@ describe('Result combining methods', () => {
 
     test('success case works the same in both modes', () => {
       const successResults = [success(1), success(2)];
-      const defaultMerge = mergeWithConfig(successResults, { priority: 'pending' });
-      const strictMerge = mergeWithConfig(successResults, { priority: 'failure' });
+      const defaultMerge = mergeWithConfig(successResults, {
+        priority: 'pending',
+      });
+      const strictMerge = mergeWithConfig(successResults, {
+        priority: 'failure',
+      });
 
       expect(defaultMerge.unwrapOr([])).toEqual([1, 2]);
       expect(strictMerge.unwrapOr([])).toEqual([1, 2]);
@@ -841,5 +845,93 @@ describe('Result combining methods', () => {
       const withPending = [success(1), pending, success(2)];
       expect(merge(withPending).isPending()).toBe(true);
     });
+  });
+});
+
+describe('equal method', () => {
+  test('comparing success results with primitive values', () => {
+    const v1 = success(10);
+    const v2 = success(10);
+    const v3 = success(20);
+
+    expect(v1.equal(v2)).toBe(true);
+    expect(v1.equal(v3)).toBe(false);
+  });
+
+  test('comparing success results with object values', () => {
+    interface User {
+      id: number;
+      name: string;
+    }
+
+    const user1 = success<any, User>({ id: 1, name: 'Alice' });
+    const user2 = success<any, User>({ id: 1, name: 'Bob' });
+    const user3 = success<any, User>({ id: 2, name: 'Alice' });
+
+    // Comparing entire objects
+    expect(user1.equal(user1)).toBe(true);
+    expect(user1.equal(user2)).toBe(false);
+
+    // Comparing with field extractor
+    expect(user1.equal(user2, (user) => user.id)).toBe(true);
+    expect(user1.equal(user3, (user) => user.id)).toBe(false);
+  });
+
+  test('comparing initial states', () => {
+    const a: Result<any, number> = initial;
+    expect(a.equal(initial)).toBe(true);
+    expect(a.equal(success<any, number>(10))).toBe(false);
+  });
+
+  test('comparing pending states', () => {
+    const a: Result<any, number> = pending;
+    expect(a.equal(pending)).toBe(true);
+    expect(a.equal(success(10))).toBe(false);
+  });
+
+  test('comparing failure results', () => {
+    const err1 = new Error('Test error');
+    const err2 = new Error('Test error');
+    const err3 = new Error('Different error');
+
+    const f1 = failure(err1);
+    const f2 = failure(err1);
+    const f3 = failure(err2);
+    const f4 = failure(err3);
+
+    expect(f1.equal(f2)).toBe(true);
+    expect(f1.equal(f3)).toBe(true); // Same error object
+    expect(f1.equal(f4)).toBe(false);
+  });
+
+  test('comparing mixed states', () => {
+    const s = success(10);
+    const f = failure(new Error());
+    const i = initial;
+    const p = pending;
+
+    expect(s.equal(f)).toBe(false);
+    expect(i.equal(p)).toBe(false);
+    expect(s.equal(i)).toBe(false);
+    expect(f.equal(p)).toBe(false);
+  });
+
+  test('custom field extractor with complex objects', () => {
+    interface Complex {
+      nested: {
+        value: number;
+        name: string;
+      };
+    }
+
+    const obj1 = success<Error, Complex>({
+      nested: { value: 42, name: 'Test' },
+    });
+    const obj2 = success<Error, Complex>({
+      nested: { value: 42, name: 'Different' },
+    });
+
+    expect(obj1.equal(obj2, (complex) => complex.nested.value)).toBe(true);
+    expect(obj1.equal(obj2, (complex) => complex.nested.name)).toBe(false);
   });
 });

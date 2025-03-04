@@ -656,6 +656,16 @@ class ResultConstructor<F, S, T extends ResultType = ResultType>
     });
   }
 
+  equal(x: Result<any, S>, fieldExtractor?: (item: S) => unknown): boolean {
+    const extractor = fieldExtractor ?? ((item: S) => item as unknown);
+    if (this.isInitial()) return x.isInitial();
+    if (this.isPending()) return x.isPending();
+
+    if (this.isFailure()) return x.isFailure() && this.value === x.value;
+
+    return x.isSuccess() && extractor(this.value as S) === extractor(x.value);
+  }
+
   or(x: Result<F, S>): Result<F, S> {
     if (this.isSuccess()) {
       return this as Result<F, S>;

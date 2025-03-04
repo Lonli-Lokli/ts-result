@@ -10,7 +10,7 @@
     "build:copy": "shx cp ./packages/ts-result/package.json ./build/package.json && shx cp ./README.md ./build/README.md",
     "build:js": "tsup",
     "build:check": "attw --pack build",
-    "lint-staged": "lint-staged",
+    "lint-staged": "lint-staged",    
     "test": "nx run ts-result:test",
     "format": "nx format:write",
     "deploy": "cd build && npm publish --access public",

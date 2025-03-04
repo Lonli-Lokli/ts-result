@@ -57,6 +57,7 @@ const user = getUser(1).map(({ email }) => email);
 - [`Result#isPending`](#resultispending)
 - [`Result#isFailure`](#resultisfailure)
 - [`Result#isSuccess`](#resultissuccess)
+- [`Result#equal`](#resultequal)
 - [`Result#or`](#resultor)
 - [`Result#join`](#resultjoin)
 - [`Result#map`](#resultmap)
@@ -481,6 +482,31 @@ const v2 = failure(2);
 v1.isSuccess(); // true
 v2.isSuccess(); // false
 ```
+#### `Result#equal`
+
+```typescript
+function equal<T>(x: Result<F, S>, extractor?: (item: S): T): boolean;
+```
+
+- The `equal` method compares the current Result instance with another Result instance for equality. It provides flexibility in how equality is determined through an optional field extractor.
+
+Example:
+
+```typescript
+// Comparing entire values
+const result1 = success(10);
+const result2 = success(10);
+const result3 = success(20);
+result1.equal(result2);  // true
+result1.equal(result3);  // false
+
+// Comparing with a field extractor
+interface User { id: number; name: string; }
+const user1 = success({ id: 1, name: 'Alice' });
+const user2 = success({ id: 1, name: 'Bob' });
+user1.equal(user2, user => user.id);  // true
+```
+
 
 #### `Result#or`
 
