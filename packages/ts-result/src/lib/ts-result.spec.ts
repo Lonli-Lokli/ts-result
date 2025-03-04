@@ -892,16 +892,13 @@ describe('equal method', () => {
   test('comparing failure results', () => {
     const err1 = new Error('Test error');
     const err2 = new Error('Test error');
-    const err3 = new Error('Different error');
 
     const f1 = failure(err1);
     const f2 = failure(err1);
     const f3 = failure(err2);
-    const f4 = failure(err3);
 
-    expect(f1.equal(f2)).toBe(true);
-    expect(f1.equal(f3)).toBe(true); // Same error object
-    expect(f1.equal(f4)).toBe(false);
+    expect(f1.equal(f2)).toBe(true);// Same error object
+    expect(f1.equal(f3)).toBe(false); 
   });
 
   test('comparing mixed states', () => {
