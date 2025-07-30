@@ -811,6 +811,11 @@ describe('Result combining methods', () => {
       }
     });
 
+    test('single pending correctly processed', () => {
+      const merged = mergeWithConfig([pending], { priority: 'failure' });
+      expect(merged.isPending()).toBe(true);
+    });
+
     test('success case works the same in both modes', () => {
       const successResults = [success(1), success(2)];
       const defaultMerge = mergeWithConfig(successResults, {

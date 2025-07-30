@@ -220,7 +220,7 @@ class ResultConstructor<F, S, T extends ResultType = ResultType>
     }
 
     const successes = values.filter((r) => r.isSuccess());
-    if (successes.length === values.length) {
+    if (successes.length === values.length && successes.length > 0) {
       return success(successes.map((r) => r.value as S));
     }
 
